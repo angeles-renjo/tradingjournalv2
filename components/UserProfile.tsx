@@ -6,14 +6,12 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
 
 interface Profile {
-  username: string;
   trading_experience: string;
   preferred_markets: string[];
 }
 
 const UserProfile = () => {
   const [profile, setProfile] = useState<Profile>({
-    username: "",
     trading_experience: "beginner",
     preferred_markets: [],
   });
@@ -89,7 +87,6 @@ const UserProfile = () => {
       const { error } = await supabase
         .from("profiles")
         .update({
-          username: profile.username,
           trading_experience: profile.trading_experience,
           preferred_markets: profile.preferred_markets,
           updated_at: new Date().toISOString(),
@@ -131,17 +128,6 @@ const UserProfile = () => {
       )}
 
       <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="username">Username</Label>
-          <Input
-            id="username"
-            name="username"
-            value={profile.username}
-            onChange={handleChange}
-            required
-          />
-        </div>
-
         <div className="space-y-2">
           <Label htmlFor="trading_experience">Trading Experience</Label>
           <select
