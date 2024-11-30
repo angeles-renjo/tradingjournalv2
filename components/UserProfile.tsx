@@ -1,21 +1,28 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
+import { Profile, TradingExperience } from "@/types";
 
-interface Profile {
-  trading_experience: string;
-  preferred_markets: string[];
-}
+const INITIAL_PROFILE_STATE: Profile = {
+  id: "",
+  trading_experience: "beginner",
+  preferred_markets: [],
+  created_at: "",
+  updated_at: "",
+};
+
+const TRADING_EXPERIENCE_LEVELS: TradingExperience[] = [
+  "beginner",
+  "intermediate",
+  "advanced",
+];
 
 const UserProfile = () => {
-  const [profile, setProfile] = useState<Profile>({
-    trading_experience: "beginner",
-    preferred_markets: [],
-  });
-
+  const [profile, setProfile] = useState<Profile>(INITIAL_PROFILE_STATE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -97,8 +104,10 @@ const UserProfile = () => {
 
       setSuccess(true);
     } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to update profile";
+      setError(`Error: ${errorMessage}`);
       console.error("Error updating profile:", err);
-      setError("Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -138,9 +147,11 @@ const UserProfile = () => {
             onChange={handleChange}
             required
           >
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
+            {TRADING_EXPERIENCE_LEVELS.map((level) => (
+              <option key={level} value={level}>
+                {level.charAt(0).toUpperCase() + level.slice(1)}
+              </option>
+            ))}
           </select>
         </div>
 
