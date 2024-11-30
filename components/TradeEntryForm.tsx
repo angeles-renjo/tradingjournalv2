@@ -5,23 +5,34 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
+import {
+  TradeFormData,
+  TradeEntryFormProps,
+  TradeInsertData,
+  TradeSetupType,
+} from "@/types";
 
-interface TradeEntryFormProps {
-  userId: string;
-}
+const INITIAL_FORM_STATE: TradeFormData = {
+  instrument: "",
+  direction: "long",
+  entryPrice: "",
+  exitPrice: "",
+  positionSize: "",
+  stopLoss: "",
+  takeProfit: "",
+  setupType: "",
+};
+
+const SETUP_TYPES: TradeSetupType[] = [
+  "breakout",
+  "trend-following",
+  "reversal",
+  "range",
+  "other",
+];
 
 const TradeEntryForm = ({ userId }: TradeEntryFormProps) => {
-  const [formData, setFormData] = useState({
-    instrument: "",
-    direction: "long",
-    entryPrice: "",
-    exitPrice: "",
-    positionSize: "",
-    stopLoss: "",
-    takeProfit: "",
-    setupType: "",
-  });
-
+  const [formData, setFormData] = useState<TradeFormData>(INITIAL_FORM_STATE);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -36,6 +47,46 @@ const TradeEntryForm = ({ userId }: TradeEntryFormProps) => {
     }));
   };
 
+  const parseTradeData = (formData: TradeFormData): TradeInsertData => {
+    const entryPrice = parseFloat(formData.entryPrice);
+    const exitPrice = parseFloat(formData.exitPrice);
+    const positionSize = parseFloat(formData.positionSize);
+    const stopLoss = formData.stopLoss ? parseFloat(formData.stopLoss) : null;
+    const takeProfit = formData.takeProfit
+      ? parseFloat(formData.takeProfit)
+      : null;
+
+    if (isNaN(entryPrice) || isNaN(exitPrice) || isNaN(positionSize)) {
+      throw new Error("Invalid numeric values");
+    }
+
+    const profitLoss =
+      formData.direction === "long"
+        ? (exitPrice - entryPrice) * positionSize
+        : (entryPrice - exitPrice) * positionSize;
+
+    const profitLossPercentage =
+      ((exitPrice - entryPrice) / entryPrice) *
+      100 *
+      (formData.direction === "long" ? 1 : -1);
+
+    return {
+      user_id: userId,
+      instrument: formData.instrument,
+      direction: formData.direction,
+      entry_price: entryPrice,
+      exit_price: exitPrice,
+      position_size: positionSize,
+      stop_loss: stopLoss,
+      take_profit: takeProfit,
+      setup_type: formData.setupType as TradeSetupType,
+      profit_loss: profitLoss,
+      profit_loss_percentage: profitLossPercentage,
+      entry_date: new Date().toISOString(),
+      exit_date: new Date().toISOString(),
+    };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -44,47 +95,7 @@ const TradeEntryForm = ({ userId }: TradeEntryFormProps) => {
 
     try {
       const supabase = createClient();
-
-      // Parse numeric values
-      const entryPrice = parseFloat(formData.entryPrice);
-      const exitPrice = parseFloat(formData.exitPrice);
-      const positionSize = parseFloat(formData.positionSize);
-      const stopLoss = formData.stopLoss ? parseFloat(formData.stopLoss) : null;
-      const takeProfit = formData.takeProfit
-        ? parseFloat(formData.takeProfit)
-        : null;
-
-      // Validate numeric values
-      if (isNaN(entryPrice) || isNaN(exitPrice) || isNaN(positionSize)) {
-        throw new Error("Invalid numeric values");
-      }
-
-      // Calculate P&L
-      const profitLoss =
-        formData.direction === "long"
-          ? (exitPrice - entryPrice) * positionSize
-          : (entryPrice - exitPrice) * positionSize;
-
-      const profitLossPercentage =
-        ((exitPrice - entryPrice) / entryPrice) *
-        100 *
-        (formData.direction === "long" ? 1 : -1);
-
-      const tradeData = {
-        user_id: userId,
-        instrument: formData.instrument,
-        direction: formData.direction,
-        entry_price: entryPrice,
-        exit_price: exitPrice,
-        position_size: positionSize,
-        stop_loss: stopLoss,
-        take_profit: takeProfit,
-        setup_type: formData.setupType,
-        profit_loss: profitLoss,
-        profit_loss_percentage: profitLossPercentage,
-        entry_date: new Date().toISOString(),
-        exit_date: new Date().toISOString(),
-      };
+      const tradeData = parseTradeData(formData);
 
       console.log("Submitting trade data:", tradeData);
 
@@ -102,16 +113,7 @@ const TradeEntryForm = ({ userId }: TradeEntryFormProps) => {
       console.log("Trade saved successfully:", data);
 
       setSuccess(true);
-      setFormData({
-        instrument: "",
-        direction: "long",
-        entryPrice: "",
-        exitPrice: "",
-        positionSize: "",
-        stopLoss: "",
-        takeProfit: "",
-        setupType: "",
-      });
+      setFormData(INITIAL_FORM_STATE);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to save trade";
@@ -253,11 +255,12 @@ const TradeEntryForm = ({ userId }: TradeEntryFormProps) => {
               required
             >
               <option value="">Select setup type</option>
-              <option value="breakout">Breakout</option>
-              <option value="trend-following">Trend Following</option>
-              <option value="reversal">Reversal</option>
-              <option value="range">Range</option>
-              <option value="other">Other</option>
+              {SETUP_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type.charAt(0).toUpperCase() +
+                    type.slice(1).replace("-", " ")}
+                </option>
+              ))}
             </select>
           </div>
         </div>
