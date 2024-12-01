@@ -109,7 +109,6 @@ export default function Dashboard({ userId }: { userId: string }) {
           <div className="text-center py-8 text-gray-500">
             <ActivitySquare className="mx-auto h-12 w-12 mb-4 opacity-50" />
             <p>No trades recorded yet</p>
-            <TradeEntryForm userId={userId} />
           </div>
         </CardContent>
       </Card>
