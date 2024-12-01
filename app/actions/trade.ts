@@ -9,9 +9,25 @@ import type { TradeInsertData, TradeSetupType, TradeDirection } from "@/types";
 export async function createTrade(data: TradeInsertData) {
   const supabase = await createClient();
 
+  // Get the current user
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error("Not authenticated");
+  }
+
+  // Add the user_id to the trade data
+  const tradeWithUserId = {
+    ...data,
+    user_id: user.id,
+  };
+
   const { data: trade, error } = await supabase
     .from("trades")
-    .insert([data])
+    .insert([tradeWithUserId])
     .select()
     .single();
 
