@@ -1,32 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, ActivitySquare, Calendar } from "lucide-react";
 import Link from "next/link";
 import { TradeEntryForm } from "@/components/TradeEntryForm";
 import { getTradeAnalytics, getTradesByUser } from "@/app/actions/trade";
-
-interface Trade {
-  id: string;
-  entry_date: string;
-  instrument: string;
-  direction: string;
-  profit_loss: number;
-}
-
-interface Analytics {
-  totalTrades: number;
-  winRate: number;
-  profitFactor: number;
-  totalProfit: number;
-  bestTrade: Trade | null;
-  worstTrade: Trade | null;
-}
-
-interface DashboardProps {
-  userId: string;
-}
+import type { Trade, Analytics, DashboardProps, ApiError } from "@/types";
 
 export default function Dashboard({ userId }: DashboardProps) {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
@@ -34,33 +14,38 @@ export default function Dashboard({ userId }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!userId) {
-        setError("User ID is required");
-        setLoading(false);
-        return;
-      }
+  const fetchDashboardData = useCallback(async () => {
+    if (!userId) {
+      setError("User ID is required");
+      setLoading(false);
+      return;
+    }
 
-      try {
-        const [analyticsData, tradesData] = await Promise.all([
-          getTradeAnalytics(userId),
-          getTradesByUser(userId),
-        ]);
+    try {
+      const [analyticsData, tradesData] = await Promise.all([
+        getTradeAnalytics(userId),
+        getTradesByUser(userId),
+      ]);
 
-        setAnalytics(analyticsData);
-        setRecentTrades(tradesData.slice(0, 5)); // Get 5 most recent trades
-        setError(null);
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-        setError("Failed to load dashboard data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+      setAnalytics(analyticsData);
+      setRecentTrades(tradesData.slice(0, 5));
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+      const errorMessage = err as ApiError;
+      setError(errorMessage.message || "Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
   }, [userId]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  const handleTradeAdded = () => {
+    fetchDashboardData();
+  };
 
   if (error) {
     return (
@@ -85,7 +70,7 @@ export default function Dashboard({ userId }: DashboardProps) {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card className="hover:shadow-lg transition-shadow">
-          <TradeEntryForm userId={userId} />
+          <TradeEntryForm userId={userId} onTradeAdded={handleTradeAdded} />
         </Card>
 
         <Link href="/analysis">
@@ -140,7 +125,9 @@ export default function Dashboard({ userId }: DashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? "--.-" : (analytics?.profitFactor ?? 0)}
+              {loading
+                ? "--.-"
+                : (analytics?.profitFactor.toFixed(2) ?? "0.00")}
             </div>
           </CardContent>
         </Card>
@@ -166,7 +153,11 @@ export default function Dashboard({ userId }: DashboardProps) {
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${(analytics?.totalProfit ?? 0) > 0 ? "text-green-500" : "text-red-500"}`}
+              className={`text-2xl font-bold ${
+                (analytics?.totalProfit ?? 0) > 0
+                  ? "text-green-500"
+                  : "text-red-500"
+              }`}
             >
               {loading
                 ? "$--.-"
@@ -196,12 +187,27 @@ export default function Dashboard({ userId }: DashboardProps) {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="font-semibold">{trade.instrument}</p>
-                      <p className="text-sm text-gray-500">
-                        {new Date(trade.entry_date).toLocaleDateString()}
-                      </p>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-500">
+                          {new Date(trade.entry_date).toLocaleDateString()}
+                        </span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            trade.direction === "long"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {trade.direction.toUpperCase()}
+                        </span>
+                      </div>
                     </div>
                     <div
-                      className={`font-semibold ${trade.profit_loss > 0 ? "text-green-500" : "text-red-500"}`}
+                      className={`font-semibold ${
+                        trade.profit_loss > 0
+                          ? "text-green-500"
+                          : "text-red-500"
+                      }`}
                     >
                       ${trade.profit_loss.toFixed(2)}
                     </div>

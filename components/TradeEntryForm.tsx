@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,7 +26,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, X } from "lucide-react";
+import { CalendarIcon, X, PlusCircle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type {
@@ -34,10 +34,11 @@ import type {
   TradeEntryFormProps,
   TradeSetupType,
   TradeDirection,
+  TradeInsertData,
+  ApiError,
 } from "@/types";
 import { createTrade, uploadTradeScreenshots } from "@/app/actions/trade";
 import { Card, CardContent } from "./ui/card";
-import { PlusCircle } from "lucide-react";
 
 const INITIAL_FORM_STATE: TradeFormData = {
   instrument: "",
@@ -62,7 +63,8 @@ const SETUP_TYPES: TradeSetupType[] = [
   "other",
 ];
 
-export function TradeEntryForm({ userId }: TradeEntryFormProps) {
+export function TradeEntryForm({ userId, onTradeAdded }: TradeEntryFormProps) {
+  const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState<TradeFormData>(INITIAL_FORM_STATE);
   const [loading, setLoading] = useState(false);
@@ -110,7 +112,6 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
       screenshots: [...prev.screenshots, ...validFiles],
     }));
 
-    // Generate preview URLs
     validFiles.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -150,7 +151,9 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
     }
   };
 
-  const parseTradeData = async (formData: TradeFormData) => {
+  const parseTradeData = async (
+    formData: TradeFormData
+  ): Promise<TradeInsertData> => {
     const entryPrice = parseFloat(formData.entryPrice);
     const exitPrice = parseFloat(formData.exitPrice);
     const positionSize = parseFloat(formData.positionSize);
@@ -208,12 +211,23 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
 
     try {
       const tradeData = await parseTradeData(formData);
-      await createTrade(tradeData);
 
-      setSuccess(true);
-      setFormData(INITIAL_FORM_STATE);
-      setPreviewUrls([]);
-      setTimeout(() => setOpen(false), 1500);
+      startTransition(async () => {
+        try {
+          await createTrade(tradeData);
+          setSuccess(true);
+          setFormData(INITIAL_FORM_STATE);
+          setPreviewUrls([]);
+
+          // Trigger the callback to refresh dashboard data
+          onTradeAdded?.();
+
+          setTimeout(() => setOpen(false), 1500);
+        } catch (err) {
+          const errorMessage = err as ApiError;
+          setError(errorMessage.message || "Failed to save trade");
+        }
+      });
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to save trade";
@@ -584,8 +598,8 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : "Save Trade"}
+            <Button type="submit" disabled={loading || isPending}>
+              {loading || isPending ? "Saving..." : "Save Trade"}
             </Button>
           </DialogFooter>
         </form>
