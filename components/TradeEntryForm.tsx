@@ -1,11 +1,26 @@
 "use client";
-
-import React, { useState } from "react";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/utils/supabase/client";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useState } from "react";
+import { createClient } from "@/utils/supabase/client";
+import type {
   TradeFormData,
   TradeEntryFormProps,
   TradeInsertData,
@@ -31,7 +46,8 @@ const SETUP_TYPES: TradeSetupType[] = [
   "other",
 ];
 
-const TradeEntryForm = ({ userId }: TradeEntryFormProps) => {
+export function TradeEntryForm({ userId }: TradeEntryFormProps) {
+  const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState<TradeFormData>(INITIAL_FORM_STATE);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -114,6 +130,7 @@ const TradeEntryForm = ({ userId }: TradeEntryFormProps) => {
 
       setSuccess(true);
       setFormData(INITIAL_FORM_STATE);
+      setTimeout(() => setOpen(false), 1500); // Close dialog after success message
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to save trade";
@@ -125,154 +142,188 @@ const TradeEntryForm = ({ userId }: TradeEntryFormProps) => {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-6 bg-card rounded-lg shadow"
-    >
-      <div className="p-6">
-        <div className="text-2xl font-semibold mb-6">New Trade Entry</div>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="default">New Trade</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>New Trade Entry</DialogTitle>
+          <DialogDescription>
+            Enter the details of your trade. Fields marked with * are required.
+          </DialogDescription>
+        </DialogHeader>
 
-        {error && (
-          <div className="bg-destructive/15 text-destructive p-3 rounded-md mb-4">
-            {error}
-          </div>
-        )}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="bg-destructive/15 text-destructive p-3 rounded-md">
+              {error}
+            </div>
+          )}
 
-        {success && (
-          <div className="bg-green-100 text-green-700 p-3 rounded-md mb-4">
-            Trade saved successfully!
-          </div>
-        )}
+          {success && (
+            <div className="bg-green-100 text-green-700 p-3 rounded-md">
+              Trade saved successfully!
+            </div>
+          )}
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="instrument">Trading Instrument</Label>
-            <Input
-              id="instrument"
-              name="instrument"
-              placeholder="e.g., EURUSD, AAPL, BTC/USD"
-              value={formData.instrument}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="direction">Trade Direction</Label>
-            <select
-              id="direction"
-              name="direction"
-              className="w-full p-2 rounded-md border bg-background"
-              value={formData.direction}
-              onChange={handleChange}
-              required
-            >
-              <option value="long">Long</option>
-              <option value="short">Short</option>
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="entryPrice">Entry Price</Label>
+          <div className="space-y-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="instrument" className="text-right">
+                Instrument *
+              </Label>
               <Input
-                id="entryPrice"
-                name="entryPrice"
-                type="number"
-                step="any"
-                placeholder="0.00"
-                value={formData.entryPrice}
+                id="instrument"
+                name="instrument"
+                placeholder="e.g., EURUSD, AAPL, BTC/USD"
+                className="col-span-3"
+                value={formData.instrument}
                 onChange={handleChange}
                 required
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="exitPrice">Exit Price</Label>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="direction" className="text-right">
+                Direction *
+              </Label>
+              <Select
+                name="direction"
+                value={formData.direction}
+                onValueChange={(value) =>
+                  handleChange({ target: { name: "direction", value } } as any)
+                }
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select direction" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="long">Long</SelectItem>
+                  <SelectItem value="short">Short</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="entryPrice" className="text-right">
+                  Entry *
+                </Label>
+                <Input
+                  id="entryPrice"
+                  name="entryPrice"
+                  type="number"
+                  step="any"
+                  placeholder="0.00"
+                  className="col-span-3"
+                  value={formData.entryPrice}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="exitPrice" className="text-right">
+                  Exit *
+                </Label>
+                <Input
+                  id="exitPrice"
+                  name="exitPrice"
+                  type="number"
+                  step="any"
+                  placeholder="0.00"
+                  className="col-span-3"
+                  value={formData.exitPrice}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="positionSize" className="text-right">
+                Size *
+              </Label>
               <Input
-                id="exitPrice"
-                name="exitPrice"
+                id="positionSize"
+                name="positionSize"
                 type="number"
                 step="any"
-                placeholder="0.00"
-                value={formData.exitPrice}
+                placeholder="Position size"
+                className="col-span-3"
+                value={formData.positionSize}
                 onChange={handleChange}
                 required
               />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="positionSize">Position Size</Label>
-            <Input
-              id="positionSize"
-              name="positionSize"
-              type="number"
-              step="any"
-              placeholder="Position size"
-              value={formData.positionSize}
-              onChange={handleChange}
-              required
-            />
-          </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="stopLoss" className="text-right">
+                  Stop
+                </Label>
+                <Input
+                  id="stopLoss"
+                  name="stopLoss"
+                  type="number"
+                  step="any"
+                  placeholder="0.00"
+                  className="col-span-3"
+                  value={formData.stopLoss}
+                  onChange={handleChange}
+                />
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="stopLoss">Stop Loss</Label>
-              <Input
-                id="stopLoss"
-                name="stopLoss"
-                type="number"
-                step="any"
-                placeholder="0.00"
-                value={formData.stopLoss}
-                onChange={handleChange}
-              />
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="takeProfit" className="text-right">
+                  Target
+                </Label>
+                <Input
+                  id="takeProfit"
+                  name="takeProfit"
+                  type="number"
+                  step="any"
+                  placeholder="0.00"
+                  className="col-span-3"
+                  value={formData.takeProfit}
+                  onChange={handleChange}
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="takeProfit">Take Profit</Label>
-              <Input
-                id="takeProfit"
-                name="takeProfit"
-                type="number"
-                step="any"
-                placeholder="0.00"
-                value={formData.takeProfit}
-                onChange={handleChange}
-              />
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="setupType" className="text-right">
+                Setup *
+              </Label>
+              <Select
+                name="setupType"
+                value={formData.setupType}
+                onValueChange={(value) =>
+                  handleChange({ target: { name: "setupType", value } } as any)
+                }
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select setup type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SETUP_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type.charAt(0).toUpperCase() +
+                        type.slice(1).replace("-", " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="setupType">Setup Type</Label>
-            <select
-              id="setupType"
-              name="setupType"
-              className="w-full p-2 rounded-md border bg-background"
-              value={formData.setupType}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select setup type</option>
-              {SETUP_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type.charAt(0).toUpperCase() +
-                    type.slice(1).replace("-", " ")}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="p-6 bg-muted/40 rounded-b-lg">
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Saving..." : "Save Trade"}
-        </Button>
-      </div>
-    </form>
+          <DialogFooter>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Saving..." : "Save Trade"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
-};
-
-export default TradeEntryForm;
+}
