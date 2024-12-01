@@ -41,6 +41,7 @@ export interface TradeFormData {
   notes?: string; // Add notes field
   entryDateTime: string; // Add entry date/time
   exitDateTime: string; // Add exit date/time
+  screenshots: File[];
 }
 
 // Trade database record interface
@@ -58,7 +59,8 @@ export interface Trade extends BaseEntity {
   profit_loss_percentage: number;
   entry_date: string;
   exit_date: string;
-  notes: string | null; // Add this
+  notes: string | null;
+  screenshots: string[];
 }
 
 // Trade data for insertion

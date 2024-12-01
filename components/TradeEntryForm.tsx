@@ -26,7 +26,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
@@ -50,6 +50,7 @@ const INITIAL_FORM_STATE: TradeFormData = {
   notes: "",
   entryDateTime: new Date().toISOString(),
   exitDateTime: new Date().toISOString(),
+  screenshots: [],
 };
 
 const SETUP_TYPES: TradeSetupType[] = [
@@ -66,6 +67,7 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   const calculateRiskReward = (data: TradeFormData): number | null => {
     if (!data.stopLoss || !data.takeProfit) return null;
@@ -94,6 +96,60 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
     }));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+
+    const files = Array.from(e.target.files);
+    const validFiles = files.filter(
+      (file) => file.type.startsWith("image/") && file.size <= 5 * 1024 * 1024
+    );
+
+    setFormData((prev) => ({
+      ...prev,
+      screenshots: [...prev.screenshots, ...validFiles],
+    }));
+
+    // Generate preview URLs
+    validFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrls((prev) => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      screenshots: prev.screenshots.filter((_, i) => i !== index),
+    }));
+    setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleImageUpload = async (files: File[]): Promise<string[]> => {
+    const supabase = createClient();
+    const uploadPromises = files.map(async (file) => {
+      const fileExt = file.name.split(".").pop() || "";
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${userId}/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from("trade-screenshots")
+        .upload(filePath, file);
+
+      if (error) throw error;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("trade-screenshots").getPublicUrl(filePath);
+
+      return publicUrl;
+    });
+
+    return Promise.all(uploadPromises);
+  };
+
   const handleEntryDateSelect = (date: Date | undefined) => {
     if (date) {
       const currentEntry = new Date(formData.entryDateTime);
@@ -116,7 +172,9 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
     }
   };
 
-  const parseTradeData = (formData: TradeFormData): TradeInsertData => {
+  const parseTradeData = async (
+    formData: TradeFormData
+  ): Promise<TradeInsertData> => {
     const entryPrice = parseFloat(formData.entryPrice);
     const exitPrice = parseFloat(formData.exitPrice);
     const positionSize = parseFloat(formData.positionSize);
@@ -139,7 +197,10 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
       100 *
       (formData.direction === "long" ? 1 : -1);
 
-    const riskRewardRatio = calculateRiskReward(formData);
+    let screenshotUrls: string[] = [];
+    if (formData.screenshots.length > 0) {
+      screenshotUrls = await handleImageUpload(formData.screenshots);
+    }
 
     return {
       user_id: userId,
@@ -156,6 +217,7 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
       entry_date: formData.entryDateTime,
       exit_date: formData.exitDateTime,
       notes: formData.notes || null,
+      screenshots: screenshotUrls,
     };
   };
 
@@ -167,7 +229,7 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
 
     try {
       const supabase = createClient();
-      const tradeData = parseTradeData(formData);
+      const tradeData = await parseTradeData(formData);
 
       const { data, error: supabaseError } = await supabase
         .from("trades")
@@ -179,6 +241,7 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
 
       setSuccess(true);
       setFormData(INITIAL_FORM_STATE);
+      setPreviewUrls([]);
       setTimeout(() => setOpen(false), 1500);
     } catch (err) {
       const errorMessage =
@@ -492,6 +555,48 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
                 onChange={handleChange}
                 placeholder="Trade setup, market conditions, reasons for entry/exit..."
               />
+            </div>
+
+            {/* Screenshots field */}
+            <div className="grid grid-cols-4 gap-4">
+              <Label htmlFor="screenshots" className="text-right pt-2">
+                Screenshots
+              </Label>
+              <div className="col-span-3 space-y-4">
+                <Input
+                  id="screenshots"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                  className="cursor-pointer"
+                />
+                <div className="text-sm text-muted-foreground">
+                  Max file size: 5MB. Accepted formats: JPG, PNG, GIF
+                </div>
+
+                {/* Image previews */}
+                {previewUrls.length > 0 && (
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    {previewUrls.map((url, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={url}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-40 object-cover rounded-md"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-2 right-2 bg-destructive text-destructive-foreground p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
