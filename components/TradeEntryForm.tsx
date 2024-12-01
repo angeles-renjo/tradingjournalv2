@@ -29,14 +29,13 @@ import {
 import { CalendarIcon, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/utils/supabase/client";
 import type {
   TradeFormData,
   TradeEntryFormProps,
-  TradeInsertData,
   TradeSetupType,
   TradeDirection,
 } from "@/types";
+import { createTrade, uploadTradeScreenshots } from "@/app/actions/trade";
 
 const INITIAL_FORM_STATE: TradeFormData = {
   instrument: "",
@@ -127,29 +126,6 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
     setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleImageUpload = async (files: File[]): Promise<string[]> => {
-    const supabase = createClient();
-    const uploadPromises = files.map(async (file) => {
-      const fileExt = file.name.split(".").pop() || "";
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${userId}/${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from("trade-screenshots")
-        .upload(filePath, file);
-
-      if (error) throw error;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("trade-screenshots").getPublicUrl(filePath);
-
-      return publicUrl;
-    });
-
-    return Promise.all(uploadPromises);
-  };
-
   const handleEntryDateSelect = (date: Date | undefined) => {
     if (date) {
       const currentEntry = new Date(formData.entryDateTime);
@@ -172,9 +148,7 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
     }
   };
 
-  const parseTradeData = async (
-    formData: TradeFormData
-  ): Promise<TradeInsertData> => {
+  const parseTradeData = async (formData: TradeFormData) => {
     const entryPrice = parseFloat(formData.entryPrice);
     const exitPrice = parseFloat(formData.exitPrice);
     const positionSize = parseFloat(formData.positionSize);
@@ -199,7 +173,10 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
 
     let screenshotUrls: string[] = [];
     if (formData.screenshots.length > 0) {
-      screenshotUrls = await handleImageUpload(formData.screenshots);
+      screenshotUrls = await uploadTradeScreenshots(
+        userId,
+        formData.screenshots
+      );
     }
 
     return {
@@ -228,16 +205,8 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
     setSuccess(false);
 
     try {
-      const supabase = createClient();
       const tradeData = await parseTradeData(formData);
-
-      const { data, error: supabaseError } = await supabase
-        .from("trades")
-        .insert([tradeData])
-        .select()
-        .single();
-
-      if (supabaseError) throw new Error(supabaseError.message);
+      await createTrade(tradeData);
 
       setSuccess(true);
       setFormData(INITIAL_FORM_STATE);
