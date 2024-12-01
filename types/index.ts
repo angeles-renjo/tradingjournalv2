@@ -28,6 +28,7 @@ export interface Profile extends BaseEntity {
 }
 
 // Trade form data interface
+
 export interface TradeFormData {
   instrument: string;
   direction: TradeDirection;
@@ -37,6 +38,9 @@ export interface TradeFormData {
   stopLoss?: string;
   takeProfit?: string;
   setupType: TradeSetupType | "";
+  notes?: string; // Add notes field
+  entryDateTime: string; // Add entry date/time
+  exitDateTime: string; // Add exit date/time
 }
 
 // Trade database record interface
@@ -54,6 +58,7 @@ export interface Trade extends BaseEntity {
   profit_loss_percentage: number;
   entry_date: string;
   exit_date: string;
+  notes: string | null; // Add this
 }
 
 // Trade data for insertion
