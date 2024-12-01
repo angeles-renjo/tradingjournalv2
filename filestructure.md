@@ -3,6 +3,7 @@
 ├─] .env.local (ignored)
 ├── .gitignore
 ├─] .next/ (ignored)
+├── .vscode/
 ├── README.md
 ├── app/
 │ ├── (auth-pages)/
@@ -14,6 +15,8 @@
 │ │ ├── sign-up/
 │ │ │ └── page.tsx
 │ │ └── smtp-message.tsx
+│ ├── actions/
+│ │ └── trade.ts
 │ ├── actions.ts
 │ ├── auth/
 │ │ └── callback/
@@ -26,10 +29,16 @@
 │ ├── protected/
 │ │ ├── page.tsx
 │ │ └── reset-password/
+│ │ ├── filestructure.md
 │ │ └── page.tsx
-│ └── twitter-image.png
+│ ├── trade/
+│ │ └── page.tsx
+│ ├── twitter-image.png
+│ └── user/
+│ └── page.tsx
 ├── components/
-│ ├── deploy-button.tsx
+│ ├── TradeEntryForm.tsx
+│ ├── UserProfile.tsx
 │ ├── env-var-warning.tsx
 │ ├── form-message.tsx
 │ ├── header-auth.tsx
@@ -49,11 +58,16 @@
 │ └── ui/
 │ ├── badge.tsx
 │ ├── button.tsx
+│ ├── calendar.tsx
 │ ├── checkbox.tsx
+│ ├── dialog.tsx
 │ ├── dropdown-menu.tsx
 │ ├── input.tsx
-│ └── label.tsx
+│ ├── label.tsx
+│ ├── popover.tsx
+│ └── select.tsx
 ├── components.json
+├── filestructure.md
 ├── lib/
 │ └── utils.ts
 ├── middleware.ts
@@ -65,6 +79,8 @@
 ├── postcss.config.js
 ├── tailwind.config.ts
 ├── tsconfig.json
+├── types/
+│ └── index.ts
 └── utils/
 ├── cn.ts
 ├── supabase/

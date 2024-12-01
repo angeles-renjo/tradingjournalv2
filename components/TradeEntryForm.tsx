@@ -36,6 +36,8 @@ import type {
   TradeDirection,
 } from "@/types";
 import { createTrade, uploadTradeScreenshots } from "@/app/actions/trade";
+import { Card, CardContent } from "./ui/card";
+import { PlusCircle } from "lucide-react";
 
 const INITIAL_FORM_STATE: TradeFormData = {
   instrument: "",
@@ -224,7 +226,19 @@ export function TradeEntryForm({ userId }: TradeEntryFormProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="default">New Trade</Button>
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-4">
+              <PlusCircle className="h-8 w-8 text-blue-500" />
+              <div>
+                <h3 className="text-lg font-semibold">New Trade</h3>
+                <p className="text-sm text-gray-500">
+                  Record your latest trade
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
