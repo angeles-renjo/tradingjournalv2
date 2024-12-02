@@ -2,8 +2,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { PerformanceMetrics } from "@/components/analytics/PerformanceMetrics";
 import { ProfitLossChart } from "@/components/analytics/ProfitLossChart";
-import { getTradesByUser } from "@/app/actions/trades";
-
 import { redirect } from "next/navigation";
 
 export default async function AnalyticsPage() {
@@ -18,19 +16,13 @@ export default async function AnalyticsPage() {
     redirect("/sign-in");
   }
 
-  const trades = await getTradesByUser(user.id);
-
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Trading Analytics</h1>
-
-      {/* Overview Cards */}
-      <PerformanceMetrics initialTrades={trades} userId={user.id} />
-
-      {/* Charts Section */}
+      <PerformanceMetrics />
       <div className="grid gap-4 md:grid-cols-2">
         <div className="col-span-2">
-          <ProfitLossChart initialTrades={trades} userId={user.id} />
+          <ProfitLossChart />
         </div>
       </div>
     </div>

@@ -1,8 +1,9 @@
+// ProfitLossChart.tsx
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { useMemo } from "react";
 import { useTrades } from "@/context/TradeContext";
 import {
@@ -44,9 +45,29 @@ const transformTradeData = (trades: Trade[]): ChartDataPoint[] => {
 };
 
 export function ProfitLossChart() {
-  const { trades, error } = useTrades();
+  const { trades, loading, error } = useTrades();
 
   const chartData = useMemo(() => transformTradeData(trades), [trades]);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Account Balance</CardTitle>
+        </CardHeader>
+        <CardContent className="h-72">
+          <div className="flex items-center justify-center h-full">
+            <div className="flex flex-col items-center space-y-2">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Loading chart data...
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (error) {
     return (
@@ -60,81 +81,74 @@ export function ProfitLossChart() {
     );
   }
 
-  if (!chartData || chartData.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Balance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertTitle>No trades found</AlertTitle>
-            <AlertDescription>
-              Start adding trades to see your account balance progression.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card>
       <CardHeader>
         <CardTitle>Account Balance</CardTitle>
       </CardHeader>
       <CardContent className="h-72">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={chartData}
-            margin={{
-              top: 5,
-              right: 10,
-              left: 10,
-              bottom: 5,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-            <XAxis
-              dataKey="date"
-              className="text-sm"
-              tick={{ fill: "currentColor" }}
-              tickLine={{ stroke: "currentColor" }}
-              tickFormatter={(value) => new Date(value).toLocaleDateString()}
-            />
-            <YAxis
-              className="text-sm"
-              tick={{ fill: "currentColor" }}
-              tickLine={{ stroke: "currentColor" }}
-              tickFormatter={(value) => `$${value.toFixed(2)}`}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                borderColor: "hsl(var(--border))",
-                borderRadius: "0.5rem",
+        {chartData.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <Alert className="w-full">
+              <AlertTitle>No trades found</AlertTitle>
+              <AlertDescription>
+                Start adding trades to see your account balance progression.
+              </AlertDescription>
+            </Alert>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={chartData}
+              margin={{
+                top: 5,
+                right: 10,
+                left: 10,
+                bottom: 5,
               }}
-              labelFormatter={(value) => new Date(value).toLocaleDateString()}
-              formatter={(value: number, name: string) => {
-                if (name === "balance") {
-                  return [`$${value.toFixed(2)}`, "Balance"];
-                }
-                return [`$${value.toFixed(2)}`, "Trade P/L"];
-              }}
-            />
-            <Line
-              type="monotone"
-              dataKey="balance"
-              stroke="hsl(var(--primary))"
-              strokeWidth={2}
-              dot={{
-                fill: "hsl(var(--primary))",
-                stroke: "hsl(var(--primary))",
-                r: 4,
-              }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+            >
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis
+                dataKey="date"
+                className="text-sm"
+                tick={{ fill: "currentColor" }}
+                tickLine={{ stroke: "currentColor" }}
+                tickFormatter={(value) => new Date(value).toLocaleDateString()}
+              />
+              <YAxis
+                className="text-sm"
+                tick={{ fill: "currentColor" }}
+                tickLine={{ stroke: "currentColor" }}
+                tickFormatter={(value) => `$${value.toFixed(2)}`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--card))",
+                  borderColor: "hsl(var(--border))",
+                  borderRadius: "0.5rem",
+                }}
+                labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                formatter={(value: number, name: string) => {
+                  if (name === "balance") {
+                    return [`$${value.toFixed(2)}`, "Balance"];
+                  }
+                  return [`$${value.toFixed(2)}`, "Trade P/L"];
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="balance"
+                stroke="hsl(var(--primary))"
+                strokeWidth={2}
+                dot={{
+                  fill: "hsl(var(--primary))",
+                  stroke: "hsl(var(--primary))",
+                  r: 4,
+                }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );

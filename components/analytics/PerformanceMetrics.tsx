@@ -1,8 +1,9 @@
+// PerformanceMetrics.tsx
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { useMemo } from "react";
 import { useTrades } from "@/context/TradeContext";
 import type { Trade } from "@/types";
@@ -69,6 +70,28 @@ export function PerformanceMetrics() {
 
   const metrics = useMemo(() => calculateMetrics(trades), [trades]);
 
+  if (loading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading...</span>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">...</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <Alert variant="destructive">
@@ -76,17 +99,6 @@ export function PerformanceMetrics() {
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>
           Failed to load performance metrics. Please try again later.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (metrics.totalTrades === 0) {
-    return (
-      <Alert>
-        <AlertTitle>No trades found</AlertTitle>
-        <AlertDescription>
-          Start adding trades to see your performance metrics.
         </AlertDescription>
       </Alert>
     );
@@ -125,7 +137,9 @@ export function PerformanceMetrics() {
         </CardHeader>
         <CardContent>
           <div
-            className={`text-2xl font-bold ${metrics.totalProfit >= 0 ? "text-green-500" : "text-red-500"}`}
+            className={`text-2xl font-bold ${
+              metrics.totalProfit >= 0 ? "text-green-500" : "text-red-500"
+            }`}
           >
             ${metrics.totalProfit.toFixed(2)}
           </div>
@@ -139,7 +153,9 @@ export function PerformanceMetrics() {
         </CardHeader>
         <CardContent>
           <div
-            className={`text-2xl font-bold ${metrics.avgTradeProfit >= 0 ? "text-green-500" : "text-red-500"}`}
+            className={`text-2xl font-bold ${
+              metrics.avgTradeProfit >= 0 ? "text-green-500" : "text-red-500"
+            }`}
           >
             ${metrics.avgTradeProfit.toFixed(2)}
           </div>
