@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { PerformanceMetrics } from "@/components/analytics/PerformanceMetrics";
 import { ProfitLossChart } from "@/components/analytics/ProfitLossChart";
 import { redirect } from "next/navigation";
+import PnlCalendar from "@/components/analytics/PnlCalendar";
 
 export default async function AnalyticsPage() {
   const supabase = await createClient();
@@ -23,6 +24,7 @@ export default async function AnalyticsPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <div className="col-span-2">
           <ProfitLossChart />
+          <PnlCalendar />
         </div>
       </div>
     </div>
