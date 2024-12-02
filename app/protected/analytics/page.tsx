@@ -2,7 +2,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { PerformanceMetrics } from "@/components/analytics/PerformanceMetrics";
 import { ProfitLossChart } from "@/components/analytics/ProfitLossChart";
-import { getTradesByUser } from "@/app/actions/trade";
+import { getTradesByUser } from "@/app/actions/trades";
 
 import { redirect } from "next/navigation";
 

@@ -37,7 +37,7 @@ import type {
   TradeInsertData,
   ApiError,
 } from "@/types";
-import { createTrade, uploadTradeScreenshots } from "@/app/actions/trade";
+import { createTrade, uploadTradeScreenshots } from "@/app/actions/trades";
 import { Card, CardContent } from "./ui/card";
 
 const INITIAL_FORM_STATE: TradeFormData = {

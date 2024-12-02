@@ -2,15 +2,10 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { createClient } from "@/utils/supabase/client";
 import { AlertTriangle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useTrades } from "@/context/TradeContext";
 import type { Trade } from "@/types";
-
-interface PerformanceMetricsProps {
-  initialTrades: Trade[];
-  userId: string;
-}
 
 interface Metrics {
   totalTrades: number;
@@ -69,54 +64,10 @@ const calculateMetrics = (trades: Trade[]): Metrics => {
   };
 };
 
-export function PerformanceMetrics({
-  initialTrades,
-  userId,
-}: PerformanceMetricsProps) {
-  const [metrics, setMetrics] = useState<Metrics>(() =>
-    calculateMetrics(initialTrades)
-  );
-  const [error, setError] = useState<string | null>(null);
+export function PerformanceMetrics() {
+  const { trades, loading, error } = useTrades();
 
-  useEffect(() => {
-    const supabase = createClient();
-
-    const fetchLatestTrades = async () => {
-      const { data: trades, error } = await supabase
-        .from("trades")
-        .select("*")
-        .eq("user_id", userId)
-        .order("entry_date", { ascending: true });
-
-      if (error) {
-        setError(error.message);
-        return;
-      }
-
-      setMetrics(calculateMetrics(trades as Trade[]));
-    };
-
-    // Set up real-time subscription
-    const channel = supabase
-      .channel("trades")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "trades",
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          fetchLatestTrades();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId]);
+  const metrics = useMemo(() => calculateMetrics(trades), [trades]);
 
   if (error) {
     return (

@@ -2,9 +2,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { createClient } from "@/utils/supabase/client";
 import { AlertTriangle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useTrades } from "@/context/TradeContext";
 import {
   LineChart,
   Line,
@@ -15,11 +15,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { Trade } from "@/types";
-
-interface ProfitLossChartProps {
-  initialTrades: Trade[];
-  userId: string;
-}
 
 interface ChartDataPoint {
   date: string;
@@ -48,54 +43,10 @@ const transformTradeData = (trades: Trade[]): ChartDataPoint[] => {
   }, []);
 };
 
-export function ProfitLossChart({
-  initialTrades,
-  userId,
-}: ProfitLossChartProps) {
-  const [chartData, setChartData] = useState<ChartDataPoint[]>(() =>
-    transformTradeData(initialTrades)
-  );
-  const [error, setError] = useState<string | null>(null);
+export function ProfitLossChart() {
+  const { trades, error } = useTrades();
 
-  // Set up real-time subscription for immediate feedback
-  useEffect(() => {
-    const supabase = createClient();
-
-    const fetchLatestTrades = async () => {
-      const { data: trades, error } = await supabase
-        .from("trades")
-        .select("*")
-        .eq("user_id", userId)
-        .order("entry_date", { ascending: true });
-
-      if (error) {
-        setError(error.message);
-        return;
-      }
-
-      setChartData(transformTradeData(trades as Trade[]));
-    };
-
-    const channel = supabase
-      .channel("trades")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "trades",
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          fetchLatestTrades();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId]);
+  const chartData = useMemo(() => transformTradeData(trades), [trades]);
 
   if (error) {
     return (

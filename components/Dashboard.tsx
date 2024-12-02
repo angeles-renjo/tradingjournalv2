@@ -1,57 +1,64 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, ActivitySquare, Calendar } from "lucide-react";
 import Link from "next/link";
 import { TradeEntryForm } from "@/components/TradeEntryForm";
-import { getTradeAnalytics, getTradesByUser } from "@/app/actions/trade";
-import type { Trade, Analytics, DashboardProps, ApiError } from "@/types";
+import { TradeProvider, useTrades } from "@/context/TradeContext";
+import { createClient } from "@/utils/supabase/client";
+import type { DashboardProps } from "@/types";
 
-export default function Dashboard({ userId }: DashboardProps) {
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
-  const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchDashboardData = useCallback(async () => {
-    if (!userId) {
-      setError("User ID is required");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const [analyticsData, tradesData] = await Promise.all([
-        getTradeAnalytics(userId),
-        getTradesByUser(userId),
-      ]);
-
-      // Sort trades by created_at in descending order (newest first)
-      const sortedTrades = tradesData.sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-
-      setAnalytics(analyticsData);
-      setRecentTrades(sortedTrades.slice(0, 5)); // Take only the 5 most recent trades
-      setError(null);
-    } catch (err) {
-      console.error("Error fetching dashboard data:", err);
-      const errorMessage = err as ApiError;
-      setError(errorMessage.message || "Failed to load dashboard data");
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]);
+function DashboardContent() {
+  const { analytics, recentTrades, loading, error, refreshData } = useTrades();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
 
-  const handleTradeAdded = () => {
-    fetchDashboardData();
-  };
+      if (error) {
+        setSessionError(error.message);
+        return;
+      }
+
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  if (sessionError) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-red-600 dark:text-red-400">
+            Authentication error: {sessionError}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userId) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center py-8">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mx-auto"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -76,7 +83,7 @@ export default function Dashboard({ userId }: DashboardProps) {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card className="hover:shadow-lg transition-shadow">
-          <TradeEntryForm userId={userId} onTradeAdded={handleTradeAdded} />
+          <TradeEntryForm userId={userId} onTradeAdded={refreshData} />
         </Card>
 
         <Link href="/analysis">
@@ -133,7 +140,7 @@ export default function Dashboard({ userId }: DashboardProps) {
             <div className="text-2xl font-bold">
               {loading
                 ? "--.-"
-                : (analytics?.profitFactor.toFixed(2) ?? "0.00")}
+                : (analytics?.profitFactor?.toFixed(2) ?? "0.00")}
             </div>
           </CardContent>
         </Card>
@@ -159,11 +166,7 @@ export default function Dashboard({ userId }: DashboardProps) {
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${
-                (analytics?.totalProfit ?? 0) > 0
-                  ? "text-green-500"
-                  : "text-red-500"
-              }`}
+              className={`text-2xl font-bold ${(analytics?.totalProfit ?? 0) > 0 ? "text-green-500" : "text-red-500"}`}
             >
               {loading
                 ? "$--.-"
@@ -209,11 +212,7 @@ export default function Dashboard({ userId }: DashboardProps) {
                       </div>
                     </div>
                     <div
-                      className={`font-semibold ${
-                        trade.profit_loss > 0
-                          ? "text-green-500"
-                          : "text-red-500"
-                      }`}
+                      className={`font-semibold ${trade.profit_loss > 0 ? "text-green-500" : "text-red-500"}`}
                     >
                       ${trade.profit_loss.toFixed(2)}
                     </div>
@@ -230,5 +229,31 @@ export default function Dashboard({ userId }: DashboardProps) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  if (!userId) return null;
+
+  return (
+    <TradeProvider userId={userId}>
+      <DashboardContent />
+    </TradeProvider>
   );
 }
