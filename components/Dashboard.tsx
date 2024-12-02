@@ -20,7 +20,7 @@ function ErrorDisplay({ message }: { message: string }) {
 
 export default function Dashboard() {
   const { trades: recentTrades, analytics } = useTradeData();
-  const { loading, error, refreshData } = useTradeOperations();
+  const { error } = useTradeOperations();
 
   if (error) {
     return <ErrorDisplay message={error.message} />;
@@ -78,7 +78,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? "--.-" : `${analytics?.winRate ?? 0}%`}
+              {`${analytics?.winRate ?? 0}%`}
             </div>
           </CardContent>
         </Card>
@@ -91,9 +91,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading
-                ? "--.-"
-                : (analytics?.profitFactor?.toFixed(2) ?? "0.00")}
+              {analytics?.profitFactor?.toFixed(2) ?? "0.00"}
             </div>
           </CardContent>
         </Card>
@@ -106,7 +104,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? "--" : (analytics?.totalTrades ?? 0)}
+              {analytics?.totalTrades ?? 0}
             </div>
           </CardContent>
         </Card>
@@ -119,11 +117,13 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${(analytics?.totalProfit ?? 0) > 0 ? "text-green-500" : "text-red-500"}`}
+              className={`text-2xl font-bold ${
+                (analytics?.totalProfit ?? 0) > 0
+                  ? "text-green-500"
+                  : "text-red-500"
+              }`}
             >
-              {loading
-                ? "$--.-"
-                : `$${(analytics?.totalProfit ?? 0).toFixed(2)}`}
+              {`$${(analytics?.totalProfit ?? 0).toFixed(2)}`}
             </div>
           </CardContent>
         </Card>
@@ -134,14 +134,7 @@ export default function Dashboard() {
           <CardTitle>Recent Trades</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-pulse space-y-4">
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mx-auto"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto"></div>
-              </div>
-            </div>
-          ) : recentTrades.length > 0 ? (
+          {recentTrades.length > 0 ? (
             <div className="divide-y">
               {recentTrades.map((trade) => (
                 <div key={trade.id} className="py-4">
@@ -164,7 +157,11 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div
-                      className={`font-semibold ${trade.profit_loss > 0 ? "text-green-500" : "text-red-500"}`}
+                      className={`font-semibold ${
+                        trade.profit_loss > 0
+                          ? "text-green-500"
+                          : "text-red-500"
+                      }`}
                     >
                       ${trade.profit_loss.toFixed(2)}
                     </div>

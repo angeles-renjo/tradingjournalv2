@@ -186,12 +186,20 @@ export function TradeEntryForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Add validation check
+    if (!formData.setupType) {
+      setError("Setup type is required");
+      return;
+    }
+
     setLoading(true);
     setError("");
     setSuccess(false);
 
     try {
       const tradeData = await parseTradeData(formData);
+      console.log("Trade Data being submitted:", tradeData);
       await createTrade(tradeData);
       await refreshData();
 
@@ -200,6 +208,7 @@ export function TradeEntryForm() {
       setPreviewUrls([]);
       setTimeout(() => setOpen(false), 1500);
     } catch (err) {
+      console.log("Error during submission:", err);
       setError(err instanceof Error ? err.message : "Failed to save trade");
     } finally {
       setLoading(false);
@@ -271,6 +280,7 @@ export function TradeEntryForm() {
                 onValueChange={(value) =>
                   handleChange({ target: { name: "direction", value } } as any)
                 }
+                required
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select direction" />
@@ -368,6 +378,43 @@ export function TradeEntryForm() {
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="setupType" className="text-right">
+                Setup *
+              </Label>
+              <Select
+                name="setupType"
+                value={formData.setupType} // Remove the || "breakout" since default is already set
+                onValueChange={(value) => {
+                  console.log("Selected setup type:", value);
+                  handleChange({ target: { name: "setupType", value } } as any);
+                }}
+                required
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select setup type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SETUP_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type.charAt(0).toUpperCase() +
+                        type.slice(1).replace("-", " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {formData.stopLoss && formData.takeProfit && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <div className="col-start-2 col-span-3">
+                  <span className="text-sm text-muted-foreground">
+                    Risk:Reward Ratio: {calculateRiskReward(formData)}
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid grid-cols-4 items-center gap-4">
@@ -472,41 +519,6 @@ export function TradeEntryForm() {
                 </div>
               </div>
             </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="setupType" className="text-right">
-                Setup *
-              </Label>
-              <Select
-                name="setupType"
-                value={formData.setupType}
-                onValueChange={(value) =>
-                  handleChange({ target: { name: "setupType", value } } as any)
-                }
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select setup type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SETUP_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type.charAt(0).toUpperCase() +
-                        type.slice(1).replace("-", " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {formData.stopLoss && formData.takeProfit && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <div className="col-start-2 col-span-3">
-                  <span className="text-sm text-muted-foreground">
-                    Risk:Reward Ratio: {calculateRiskReward(formData)}
-                  </span>
-                </div>
-              </div>
-            )}
 
             <div className="grid grid-cols-4 gap-4">
               <Label htmlFor="notes" className="text-right pt-2">
