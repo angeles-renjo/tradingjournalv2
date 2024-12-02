@@ -1,78 +1,33 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, ActivitySquare, Calendar } from "lucide-react";
 import Link from "next/link";
 import { TradeEntryForm } from "@/components/TradeEntryForm";
-import { TradeProvider, useTrades } from "@/context/TradeContext";
-import { createClient } from "@/utils/supabase/client";
-import type { DashboardProps } from "@/types";
+import { useTradeData } from "@/context/DataContext";
+import { useTradeOperations } from "@/context/OperationsContext";
 
-function DashboardContent() {
-  const { analytics, recentTrades, loading, error, refreshData } = useTrades();
-  const [userId, setUserId] = useState<string | null>(null);
-  const [sessionError, setSessionError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
-
-      if (error) {
-        setSessionError(error.message);
-        return;
-      }
-
-      if (user) {
-        setUserId(user.id);
-      }
-    };
-
-    fetchUser();
-  }, []);
-
-  if (sessionError) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-red-600 dark:text-red-400">
-            Authentication error: {sessionError}
-          </p>
-        </div>
+function ErrorDisplay({ message }: { message: string }) {
+  return (
+    <div className="container mx-auto p-6">
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+        <p className="text-red-600 dark:text-red-400">{message}</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  if (!userId) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="text-center py-8">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mx-auto"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+export default function Dashboard() {
+  const { trades: recentTrades, analytics } = useTradeData();
+  const { loading, error, refreshData } = useTradeOperations();
 
   if (error) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
-        </div>
-      </div>
-    );
+    return <ErrorDisplay message={error.message} />;
   }
 
   return (
     <div className="container mx-auto p-6">
-      {/* Welcome Section */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Trading Dashboard</h1>
         <p className="text-gray-600 dark:text-gray-300">
@@ -80,10 +35,9 @@ function DashboardContent() {
         </p>
       </div>
 
-      {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card className="hover:shadow-lg transition-shadow">
-          <TradeEntryForm userId={userId} onTradeAdded={refreshData} />
+          <TradeEntryForm />
         </Card>
 
         <Link href="/analysis">
@@ -115,7 +69,6 @@ function DashboardContent() {
         </Link>
       </div>
 
-      {/* Performance Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardHeader className="pb-2">
@@ -176,7 +129,6 @@ function DashboardContent() {
         </Card>
       </div>
 
-      {/* Recent Trades */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Recent Trades</CardTitle>
@@ -229,31 +181,5 @@ function DashboardContent() {
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-export default function Dashboard() {
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
-    };
-
-    fetchUser();
-  }, []);
-
-  if (!userId) return null;
-
-  return (
-    <TradeProvider userId={userId}>
-      <DashboardContent />
-    </TradeProvider>
   );
 }

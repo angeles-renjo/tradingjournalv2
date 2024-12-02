@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -26,19 +26,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Card, CardContent } from "./ui/card";
 import { CalendarIcon, X, PlusCircle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useTradeOperations } from "@/context/OperationsContext";
 import type {
   TradeFormData,
-  TradeEntryFormProps,
   TradeSetupType,
   TradeDirection,
   TradeInsertData,
-  ApiError,
 } from "@/types";
 import { createTrade, uploadTradeScreenshots } from "@/app/actions/trades";
-import { Card, CardContent } from "./ui/card";
 
 const INITIAL_FORM_STATE: TradeFormData = {
   instrument: "",
@@ -63,8 +62,8 @@ const SETUP_TYPES: TradeSetupType[] = [
   "other",
 ];
 
-export function TradeEntryForm({ userId, onTradeAdded }: TradeEntryFormProps) {
-  const [isPending, startTransition] = useTransition();
+export function TradeEntryForm() {
+  const { refreshData, userId } = useTradeOperations();
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState<TradeFormData>(INITIAL_FORM_STATE);
   const [loading, setLoading] = useState(false);
@@ -74,16 +73,12 @@ export function TradeEntryForm({ userId, onTradeAdded }: TradeEntryFormProps) {
 
   const calculateRiskReward = (data: TradeFormData): number | null => {
     if (!data.stopLoss || !data.takeProfit) return null;
-
     const entry = parseFloat(data.entryPrice);
     const stop = parseFloat(data.stopLoss);
     const target = parseFloat(data.takeProfit);
-
     if (isNaN(entry) || isNaN(stop) || isNaN(target)) return null;
-
     const risk = Math.abs(entry - stop);
     const reward = Math.abs(target - entry);
-
     return Number((reward / risk).toFixed(2));
   };
 
@@ -93,15 +88,11 @@ export function TradeEntryForm({ userId, onTradeAdded }: TradeEntryFormProps) {
     >
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-
     const files = Array.from(e.target.files);
     const validFiles = files.filter(
       (file) => file.type.startsWith("image/") && file.size <= 5 * 1024 * 1024
@@ -129,26 +120,16 @@ export function TradeEntryForm({ userId, onTradeAdded }: TradeEntryFormProps) {
     setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleEntryDateSelect = (date: Date | undefined) => {
-    if (date) {
-      const currentEntry = new Date(formData.entryDateTime);
-      date.setHours(currentEntry.getHours(), currentEntry.getMinutes());
-      setFormData((prev) => ({
-        ...prev,
-        entryDateTime: date.toISOString(),
-      }));
-    }
-  };
-
-  const handleExitDateSelect = (date: Date | undefined) => {
-    if (date) {
-      const currentExit = new Date(formData.exitDateTime);
-      date.setHours(currentExit.getHours(), currentExit.getMinutes());
-      setFormData((prev) => ({
-        ...prev,
-        exitDateTime: date.toISOString(),
-      }));
-    }
+  const handleDateSelect = (type: "entry" | "exit", date: Date | undefined) => {
+    if (!date) return;
+    const currentDate = new Date(
+      type === "entry" ? formData.entryDateTime : formData.exitDateTime
+    );
+    date.setHours(currentDate.getHours(), currentDate.getMinutes());
+    setFormData((prev) => ({
+      ...prev,
+      [type === "entry" ? "entryDateTime" : "exitDateTime"]: date.toISOString(),
+    }));
   };
 
   const parseTradeData = async (
@@ -211,27 +192,15 @@ export function TradeEntryForm({ userId, onTradeAdded }: TradeEntryFormProps) {
 
     try {
       const tradeData = await parseTradeData(formData);
+      await createTrade(tradeData);
+      await refreshData();
 
-      startTransition(async () => {
-        try {
-          await createTrade(tradeData);
-          setSuccess(true);
-          setFormData(INITIAL_FORM_STATE);
-          setPreviewUrls([]);
-
-          // Trigger the callback to refresh dashboard data
-          onTradeAdded?.();
-
-          setTimeout(() => setOpen(false), 1500);
-        } catch (err) {
-          const errorMessage = err as ApiError;
-          setError(errorMessage.message || "Failed to save trade");
-        }
-      });
+      setSuccess(true);
+      setFormData(INITIAL_FORM_STATE);
+      setPreviewUrls([]);
+      setTimeout(() => setOpen(false), 1500);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to save trade";
-      setError(`Error: ${errorMessage}`);
+      setError(err instanceof Error ? err.message : "Failed to save trade");
     } finally {
       setLoading(false);
     }
@@ -254,6 +223,7 @@ export function TradeEntryForm({ userId, onTradeAdded }: TradeEntryFormProps) {
           </CardContent>
         </Card>
       </DialogTrigger>
+
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>New Trade Entry</DialogTitle>
@@ -426,7 +396,7 @@ export function TradeEntryForm({ userId, onTradeAdded }: TradeEntryFormProps) {
                       <Calendar
                         mode="single"
                         selected={new Date(formData.entryDateTime)}
-                        onSelect={handleEntryDateSelect}
+                        onSelect={(date) => handleDateSelect("entry", date)}
                         initialFocus
                       />
                     </PopoverContent>
@@ -477,7 +447,7 @@ export function TradeEntryForm({ userId, onTradeAdded }: TradeEntryFormProps) {
                       <Calendar
                         mode="single"
                         selected={new Date(formData.exitDateTime)}
-                        onSelect={handleExitDateSelect}
+                        onSelect={(date) => handleDateSelect("exit", date)}
                         initialFocus
                       />
                     </PopoverContent>
@@ -528,7 +498,6 @@ export function TradeEntryForm({ userId, onTradeAdded }: TradeEntryFormProps) {
               </Select>
             </div>
 
-            {/* Risk:Reward Display */}
             {formData.stopLoss && formData.takeProfit && (
               <div className="grid grid-cols-4 items-center gap-4">
                 <div className="col-start-2 col-span-3">
@@ -539,7 +508,6 @@ export function TradeEntryForm({ userId, onTradeAdded }: TradeEntryFormProps) {
               </div>
             )}
 
-            {/* Notes field */}
             <div className="grid grid-cols-4 gap-4">
               <Label htmlFor="notes" className="text-right pt-2">
                 Notes
@@ -554,7 +522,6 @@ export function TradeEntryForm({ userId, onTradeAdded }: TradeEntryFormProps) {
               />
             </div>
 
-            {/* Screenshots field */}
             <div className="grid grid-cols-4 gap-4">
               <Label htmlFor="screenshots" className="text-right pt-2">
                 Screenshots
@@ -572,7 +539,6 @@ export function TradeEntryForm({ userId, onTradeAdded }: TradeEntryFormProps) {
                   Max file size: 5MB. Accepted formats: JPG, PNG, GIF
                 </div>
 
-                {/* Image previews */}
                 {previewUrls.length > 0 && (
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     {previewUrls.map((url, index) => (
@@ -598,8 +564,8 @@ export function TradeEntryForm({ userId, onTradeAdded }: TradeEntryFormProps) {
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={loading || isPending}>
-              {loading || isPending ? "Saving..." : "Save Trade"}
+            <Button type="submit" disabled={loading}>
+              {loading ? "Saving..." : "Save Trade"}
             </Button>
           </DialogFooter>
         </form>

@@ -2,16 +2,17 @@
 
 import React, { useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { useTradeOperations } from "./OperationsContext";
 
 export function RealtimeProvider({
   children,
   userId,
-  onUpdate,
 }: {
   children: React.ReactNode;
   userId: string;
-  onUpdate: () => void;
 }) {
+  const { refreshData } = useTradeOperations();
+
   useEffect(() => {
     const supabase = createClient();
 
@@ -25,14 +26,14 @@ export function RealtimeProvider({
           table: "trades",
           filter: `user_id=eq.${userId}`,
         },
-        onUpdate
+        refreshData
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, onUpdate]);
+  }, [userId, refreshData]);
 
   return <>{children}</>;
 }

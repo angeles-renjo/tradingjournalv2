@@ -6,9 +6,46 @@ import { TradeDataProvider } from "@/context/DataContext";
 import { TradeOperationsProvider } from "@/context/OperationsContext";
 import { RealtimeProvider } from "@/context/RealTimeContext";
 import { TradeProvider } from "@/context/TradeContext";
-import { useTradeOperations } from "@/context/OperationsContext";
 
-// components/providers/TradeProviderClient.tsx
+function DataInitializer({
+  userId,
+  children,
+}: {
+  userId: string;
+  children: React.ReactNode;
+}) {
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    const initializeData = async () => {
+      const supabase = createClient();
+      try {
+        const { data: tradesData, error: tradesError } = await supabase
+          .from("trades")
+          .select("*")
+          .eq("user_id", userId)
+          .order("entry_date", { ascending: false });
+
+        if (!tradesError && tradesData) {
+          // Initialize your data here using context
+          setIsInitialized(true);
+        }
+      } catch (error) {
+        console.error("Error initializing data:", error);
+      }
+    };
+
+    if (userId && !isInitialized) {
+      initializeData();
+    }
+  }, [userId, isInitialized]);
+
+  if (!isInitialized) {
+    return <div>Loading trade data...</div>;
+  }
+
+  return <>{children}</>;
+}
 
 export default function TradeProviderClient({
   children,
@@ -37,26 +74,12 @@ export default function TradeProviderClient({
   return (
     <TradeDataProvider>
       <TradeOperationsProvider userId={userId}>
-        <RealtimeProviderWrapper userId={userId}>
-          <TradeProvider>{children}</TradeProvider>
-        </RealtimeProviderWrapper>
+        <RealtimeProvider userId={userId}>
+          <TradeProvider>
+            <DataInitializer userId={userId}>{children}</DataInitializer>
+          </TradeProvider>
+        </RealtimeProvider>
       </TradeOperationsProvider>
     </TradeDataProvider>
-  );
-}
-
-function RealtimeProviderWrapper({
-  children,
-  userId,
-}: {
-  children: React.ReactNode;
-  userId: string;
-}) {
-  const { refreshData } = useTradeOperations();
-
-  return (
-    <RealtimeProvider userId={userId} onUpdate={refreshData}>
-      {children}
-    </RealtimeProvider>
   );
 }
