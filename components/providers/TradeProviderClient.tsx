@@ -6,6 +6,7 @@ import { TradeDataProvider } from "@/context/DataContext";
 import { TradeOperationsProvider } from "@/context/OperationsContext";
 import { RealtimeProvider } from "@/context/RealTimeContext";
 import { TradeProvider } from "@/context/TradeContext";
+import LoadingSpinner from "@/components/LoadingSpinner"; // Add this import
 
 function DataInitializer({
   userId,
@@ -27,7 +28,6 @@ function DataInitializer({
           .order("entry_date", { ascending: false });
 
         if (!tradesError && tradesData) {
-          // Initialize your data here using context
           setIsInitialized(true);
         }
       } catch (error) {
@@ -41,7 +41,7 @@ function DataInitializer({
   }, [userId, isInitialized]);
 
   if (!isInitialized) {
-    return <div>Loading trade data...</div>;
+    return <LoadingSpinner message="Loading trade data..." />;
   }
 
   return <>{children}</>;
@@ -68,7 +68,7 @@ export default function TradeProviderClient({
     fetchUser();
   }, []);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <LoadingSpinner message="Authenticating..." />;
   if (!userId) return <>{children}</>;
 
   return (
