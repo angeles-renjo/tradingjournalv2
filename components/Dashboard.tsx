@@ -27,8 +27,14 @@ export default function Dashboard({ userId }: DashboardProps) {
         getTradesByUser(userId),
       ]);
 
+      // Sort trades by created_at in descending order (newest first)
+      const sortedTrades = tradesData.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
       setAnalytics(analyticsData);
-      setRecentTrades(tradesData.slice(0, 5));
+      setRecentTrades(sortedTrades.slice(0, 5)); // Take only the 5 most recent trades
       setError(null);
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
