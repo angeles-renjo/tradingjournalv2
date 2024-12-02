@@ -17,6 +17,7 @@ import {
 import type { Trade } from "@/types";
 
 interface ProfitLossChartProps {
+  initialTrades: Trade[];
   userId: string;
 }
 
@@ -26,56 +27,74 @@ interface ChartDataPoint {
   trade_pl: number;
 }
 
-export function ProfitLossChart({ userId }: ProfitLossChartProps) {
-  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+const transformTradeData = (trades: Trade[]): ChartDataPoint[] => {
+  return trades.reduce<ChartDataPoint[]>((acc, trade) => {
+    const previousBalance = acc.length > 0 ? acc[acc.length - 1].balance : 0;
+    const date = new Date(trade.entry_date);
+
+    // Skip invalid dates
+    if (isNaN(date.getTime())) {
+      return acc;
+    }
+
+    return [
+      ...acc,
+      {
+        date: date.toISOString().split("T")[0], // YYYY-MM-DD format
+        balance: previousBalance + trade.profit_loss,
+        trade_pl: trade.profit_loss,
+      },
+    ];
+  }, []);
+};
+
+export function ProfitLossChart({
+  initialTrades,
+  userId,
+}: ProfitLossChartProps) {
+  const [chartData, setChartData] = useState<ChartDataPoint[]>(() =>
+    transformTradeData(initialTrades)
+  );
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
+  // Set up real-time subscription for immediate feedback
   useEffect(() => {
-    const fetchTrades = async () => {
-      const supabase = createClient();
+    const supabase = createClient();
 
-      const { data, error } = await supabase
+    const fetchLatestTrades = async () => {
+      const { data: trades, error } = await supabase
         .from("trades")
-        .select("entry_date, profit_loss")
+        .select("*")
         .eq("user_id", userId)
         .order("entry_date", { ascending: true });
 
       if (error) {
         setError(error.message);
-        setLoading(false);
         return;
       }
 
-      // Transform trade data into chart data with running balance
-      const transformedData = (data as Trade[]).reduce<ChartDataPoint[]>(
-        (acc, trade) => {
-          const previousBalance =
-            acc.length > 0 ? acc[acc.length - 1].balance : 0;
-          const date = new Date(trade.entry_date);
-
-          // Skip invalid dates
-          if (isNaN(date.getTime())) {
-            return acc;
-          }
-
-          return [
-            ...acc,
-            {
-              date: date.toISOString().split("T")[0], // YYYY-MM-DD format
-              balance: previousBalance + trade.profit_loss,
-              trade_pl: trade.profit_loss,
-            },
-          ];
-        },
-        []
-      );
-
-      setChartData(transformedData);
-      setLoading(false);
+      setChartData(transformTradeData(trades as Trade[]));
     };
 
-    fetchTrades();
+    const channel = supabase
+      .channel("trades")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "trades",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          fetchLatestTrades();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   if (error) {
@@ -87,19 +106,6 @@ export function ProfitLossChart({ userId }: ProfitLossChartProps) {
           Failed to load performance data. Please try again later.
         </AlertDescription>
       </Alert>
-    );
-  }
-
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Balance</CardTitle>
-        </CardHeader>
-        <CardContent className="h-72 flex items-center justify-center">
-          Loading...
-        </CardContent>
-      </Card>
     );
   }
 

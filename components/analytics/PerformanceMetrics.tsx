@@ -1,46 +1,39 @@
-// components/analytics/PerformanceMetrics.tsx
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createClient } from "@/utils/supabase/server";
-import { AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { createClient } from "@/utils/supabase/client";
+import { AlertTriangle } from "lucide-react";
+import { useEffect, useState } from "react";
+import type { Trade } from "@/types";
 
 interface PerformanceMetricsProps {
+  initialTrades: Trade[];
   userId: string;
 }
 
-export async function PerformanceMetrics({ userId }: PerformanceMetricsProps) {
-  const supabase = await createClient();
+interface Metrics {
+  totalTrades: number;
+  winningTrades: number;
+  winRate: string;
+  totalProfit: number;
+  avgTradeProfit: number;
+  consecutiveWins: number;
+}
 
-  const { data: trades, error } = await supabase
-    .from("trades")
-    .select("*")
-    .eq("user_id", userId);
-
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
-        <AlertDescription>
-          Failed to load performance metrics. Please try again later.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (!trades || trades.length === 0) {
-    return (
-      <Alert>
-        <AlertTitle>No trades found</AlertTitle>
-        <AlertDescription>
-          Start adding trades to see your performance metrics.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  // Calculate metrics
+const calculateMetrics = (trades: Trade[]): Metrics => {
   const totalTrades = trades.length;
+  if (totalTrades === 0) {
+    return {
+      totalTrades: 0,
+      winningTrades: 0,
+      winRate: "0.0",
+      totalProfit: 0,
+      avgTradeProfit: 0,
+      consecutiveWins: 0,
+    };
+  }
+
   const winningTrades = trades.filter((trade) => trade.profit_loss > 0).length;
   const winRate = ((winningTrades / totalTrades) * 100).toFixed(1);
   const totalProfit = trades.reduce(
@@ -48,70 +41,10 @@ export async function PerformanceMetrics({ userId }: PerformanceMetricsProps) {
     0
   );
   const avgTradeProfit = totalProfit / totalTrades;
-  const consecutiveWins = calculateConsecutiveWins(trades);
 
-  return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Trades</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{totalTrades}</div>
-          <p className="text-xs text-muted-foreground">
-            {winningTrades} winners, {totalTrades - winningTrades} losers
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{winRate}%</div>
-          <p className="text-xs text-muted-foreground">
-            Best streak: {consecutiveWins} trades
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total P/L</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div
-            className={`text-2xl font-bold ${totalProfit >= 0 ? "text-green-500" : "text-red-500"}`}
-          >
-            ${totalProfit.toFixed(2)}
-          </div>
-          <p className="text-xs text-muted-foreground">All time profit/loss</p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Avg Trade</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div
-            className={`text-2xl font-bold ${avgTradeProfit >= 0 ? "text-green-500" : "text-red-500"}`}
-          >
-            ${avgTradeProfit.toFixed(2)}
-          </div>
-          <p className="text-xs text-muted-foreground">Per trade average</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function calculateConsecutiveWins(trades: any[]): number {
+  // Calculate consecutive wins
   let maxStreak = 0;
   let currentStreak = 0;
-
-  // Sort trades by date to get proper sequence
   const sortedTrades = [...trades].sort(
     (a, b) =>
       new Date(a.entry_date).getTime() - new Date(b.entry_date).getTime()
@@ -126,5 +59,142 @@ function calculateConsecutiveWins(trades: any[]): number {
     }
   }
 
-  return maxStreak;
+  return {
+    totalTrades,
+    winningTrades,
+    winRate,
+    totalProfit,
+    avgTradeProfit,
+    consecutiveWins: maxStreak,
+  };
+};
+
+export function PerformanceMetrics({
+  initialTrades,
+  userId,
+}: PerformanceMetricsProps) {
+  const [metrics, setMetrics] = useState<Metrics>(() =>
+    calculateMetrics(initialTrades)
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    const fetchLatestTrades = async () => {
+      const { data: trades, error } = await supabase
+        .from("trades")
+        .select("*")
+        .eq("user_id", userId)
+        .order("entry_date", { ascending: true });
+
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      setMetrics(calculateMetrics(trades as Trade[]));
+    };
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel("trades")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "trades",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          fetchLatestTrades();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          Failed to load performance metrics. Please try again later.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (metrics.totalTrades === 0) {
+    return (
+      <Alert>
+        <AlertTitle>No trades found</AlertTitle>
+        <AlertDescription>
+          Start adding trades to see your performance metrics.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Trades</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{metrics.totalTrades}</div>
+          <p className="text-xs text-muted-foreground">
+            {metrics.winningTrades} winners,{" "}
+            {metrics.totalTrades - metrics.winningTrades} losers
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{metrics.winRate}%</div>
+          <p className="text-xs text-muted-foreground">
+            Best streak: {metrics.consecutiveWins} trades
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total P/L</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div
+            className={`text-2xl font-bold ${metrics.totalProfit >= 0 ? "text-green-500" : "text-red-500"}`}
+          >
+            ${metrics.totalProfit.toFixed(2)}
+          </div>
+          <p className="text-xs text-muted-foreground">All time profit/loss</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Avg Trade</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div
+            className={`text-2xl font-bold ${metrics.avgTradeProfit >= 0 ? "text-green-500" : "text-red-500"}`}
+          >
+            ${metrics.avgTradeProfit.toFixed(2)}
+          </div>
+          <p className="text-xs text-muted-foreground">Per trade average</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
