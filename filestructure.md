@@ -27,6 +27,8 @@
 │ ├── opengraph-image.png
 │ ├── page.tsx
 │ ├── protected/
+│ │ ├── analytics/
+│ │ │ └── page.tsx
 │ │ ├── page.tsx
 │ │ └── reset-password/
 │ │ ├── filestructure.md
@@ -37,8 +39,12 @@
 │ └── user/
 │ └── page.tsx
 ├── components/
+│ ├── Dashboard.tsx
 │ ├── TradeEntryForm.tsx
 │ ├── UserProfile.tsx
+│ ├── analytics/
+│ │ ├── PerformanceMetrics.tsx
+│ │ └── ProfitLossChart.tsx
 │ ├── env-var-warning.tsx
 │ ├── form-message.tsx
 │ ├── header-auth.tsx
@@ -56,9 +62,12 @@
 │ ├── typography/
 │ │ └── inline-code.tsx
 │ └── ui/
+│ ├── alert.tsx
 │ ├── badge.tsx
 │ ├── button.tsx
 │ ├── calendar.tsx
+│ ├── card.tsx
+│ ├── chart.tsx
 │ ├── checkbox.tsx
 │ ├── dialog.tsx
 │ ├── dropdown-menu.tsx
