@@ -111,7 +111,7 @@ export function ProfitLossChart() {
               <XAxis
                 dataKey="date"
                 className="text-sm"
-                tick={{ fill: "currentColor" }}
+                tick={false}
                 tickLine={{ stroke: "currentColor" }}
                 tickFormatter={(value) => new Date(value).toLocaleDateString()}
               />
