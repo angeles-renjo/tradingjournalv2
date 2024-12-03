@@ -18,15 +18,20 @@ export default async function AnalyticsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Trading Analytics</h1>
-      <PerformanceMetrics />
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="col-span-2">
+    <>
+      <h1 className="text-3xl font-bold tracking-tight text-center">
+        Trading Analytics
+      </h1>
+      <div className=" lg:space-y-0 lg:grid lg:grid-cols-4 lg:gap-6">
+        <div className="space-y-6 lg:col-span-2 flex flex-col justify-around">
+          <PerformanceMetrics />
           <ProfitLossChart />
+        </div>
+
+        <div className="lg:col-span-2">
           <PnlCalendar />
         </div>
       </div>
-    </div>
+    </>
   );
 }
