@@ -26,6 +26,7 @@ export async function getTradeAnalytics(userId: string): Promise<Analytics> {
       totalProfit: 0,
       bestTrade: null,
       worstTrade: null,
+      goalTarget: null,
     };
   }
 
@@ -53,5 +54,6 @@ export async function getTradeAnalytics(userId: string): Promise<Analytics> {
     totalProfit: Number(totalProfit.toFixed(2)),
     bestTrade: sortedTrades[0] || null,
     worstTrade: sortedTrades[sortedTrades.length - 1] || null,
+    goalTarget: null,
   };
 }

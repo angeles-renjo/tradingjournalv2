@@ -40,7 +40,7 @@ export default function Dashboard() {
           <TradeEntryForm />
         </Card>
 
-        <Link href="/analysis">
+        <Link href="/protected/analytics">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardContent className="pt-6">
               <div className="flex items-center space-x-4">

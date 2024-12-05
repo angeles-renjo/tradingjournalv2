@@ -75,6 +75,7 @@ export interface Analytics {
   totalProfit: number;
   bestTrade: Trade | null;
   worstTrade: Trade | null;
+  goalTarget: number | null;
 }
 
 // Props interfaces
