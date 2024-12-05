@@ -1,5 +1,6 @@
 "use client";
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,13 +14,43 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useTradeData } from "@/context/DataContext";
+import { setGoal, getGoal } from "@/app/actions/goals";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
-export default function ProfitGoalTracker() {
-  const { analytics, goalTarget, setGoalTarget } = useTradeData();
+export default function GoalProgress() {
+  const { analytics } = useTradeData();
   const [isEditingGoal, setIsEditingGoal] = useState(false);
-  const [targetAmount, setTargetAmount] = useState(
-    goalTarget?.toString() || ""
-  );
+  const [targetAmount, setTargetAmount] = useState("");
+  const [goalTarget, setGoalTarget] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchGoal = async () => {
+      try {
+        setIsLoading(true);
+        const result = await getGoal();
+        console.log("Goal fetch result:", result); // Debug log
+
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+
+        if (result.data) {
+          setGoalTarget(result.data.target_amount);
+          setTargetAmount(result.data.target_amount.toString());
+        }
+      } catch (err) {
+        console.error("Error in fetchGoal:", err);
+        setError("Failed to load goal");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchGoal();
+  }, []);
 
   const currentProfit = analytics?.totalProfit || 0;
   const progressPercentage = goalTarget
@@ -40,15 +71,50 @@ export default function ProfitGoalTracker() {
     background: "hsl(var(--muted))",
   };
 
-  const handleGoalUpdate = () => {
+  const handleGoalUpdate = async () => {
     const newGoalAmount = parseFloat(targetAmount);
     if (!isNaN(newGoalAmount) && newGoalAmount > 0) {
-      setGoalTarget(newGoalAmount);
-      setIsEditingGoal(false);
+      setIsLoading(true);
+      try {
+        const result = await setGoal(newGoalAmount);
+        console.log("Goal update result:", result); // Debug log
+
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+
+        if (result.data) {
+          setGoalTarget(result.data.target_amount);
+          setIsEditingGoal(false);
+          setError(null); // Clear any existing errors
+        }
+      } catch (err) {
+        console.error("Error in handleGoalUpdate:", err);
+        setError("Failed to update goal");
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
   const renderGoalContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex h-[300px] items-center justify-center">
+          <LoadingSpinner />
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex h-[300px] items-center justify-center">
+          <p className="text-destructive">{error}</p>
+        </div>
+      );
+    }
+
     if (!analytics || currentProfit === 0) {
       return (
         <div className="flex h-[300px] items-center justify-center">
@@ -141,7 +207,9 @@ export default function ProfitGoalTracker() {
               </div>
             </div>
             <div className="flex justify-end">
-              <Button onClick={handleGoalUpdate}>Save Goal</Button>
+              <Button onClick={handleGoalUpdate} disabled={isLoading}>
+                "Save Goal"
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
