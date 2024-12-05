@@ -36,8 +36,8 @@ export default function ProfitGoalTracker() {
   ];
 
   const CHART_COLORS = {
-    progress: "#22c55e", // Green for progress
-    background: "#1e1e1e", // Dark gray for background
+    progress: "#22c55e",
+    background: "hsl(var(--muted))",
   };
 
   const handleGoalUpdate = () => {
@@ -52,7 +52,7 @@ export default function ProfitGoalTracker() {
     if (!analytics || currentProfit === 0) {
       return (
         <div className="flex h-[300px] items-center justify-center">
-          <p className="text-gray-400">No trades found</p>
+          <p className="text-muted-foreground">No trades found</p>
         </div>
       );
     }
@@ -60,7 +60,9 @@ export default function ProfitGoalTracker() {
     if (!goalTarget) {
       return (
         <div className="flex h-[300px] items-center justify-center">
-          <p className="text-gray-400">Set a goal to track your progress</p>
+          <p className="text-muted-foreground">
+            Set a goal to track your progress
+          </p>
         </div>
       );
     }
@@ -94,11 +96,16 @@ export default function ProfitGoalTracker() {
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-4xl font-bold">
+          <div className="text-4xl font-bold text-foreground">
             {progressPercentage.toFixed(1)}%
           </div>
-          <div className="text-sm text-gray-400">
-            ${currentProfit.toLocaleString()} / ${goalTarget.toLocaleString()}
+          <div className="mt-2 flex flex-col items-center gap-1">
+            <div className="text-sm text-muted-foreground">
+              Current: ${currentProfit.toLocaleString()}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Goal: ${goalTarget.toLocaleString()}
+            </div>
           </div>
         </div>
       </div>
@@ -106,9 +113,11 @@ export default function ProfitGoalTracker() {
   };
 
   return (
-    <Card className="w-full text-white">
+    <Card>
       <CardHeader className="flex flex-row items-center justify-between p-4">
-        <CardTitle className="text-xl font-normal">Profit Goal</CardTitle>
+        <CardTitle className="text-xl font-normal text-foreground">
+          Profit Goal
+        </CardTitle>
         <Dialog open={isEditingGoal} onOpenChange={setIsEditingGoal}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="rounded-lg">
