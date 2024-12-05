@@ -1,11 +1,11 @@
-// PerformanceMetrics.tsx
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, Loader2 } from "lucide-react";
 import { useMemo } from "react";
+import { AlertTriangle, Loader2 } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useTrades } from "@/context/TradeContext";
+import { cn } from "@/lib/utils";
 import type { Trade } from "@/types";
 
 interface Metrics {
@@ -17,9 +17,68 @@ interface Metrics {
   consecutiveWins: number;
 }
 
+interface MetricCardProps {
+  title: string;
+  mainValue: string;
+  subtitle: string;
+  subtitleValue?: string;
+  valueClassName?: string;
+}
+
+const MetricCard = ({
+  title,
+  mainValue,
+  subtitle,
+  subtitleValue,
+  valueClassName,
+}: MetricCardProps) => (
+  <Card className="relative flex flex-col min-w-0 overflow-hidden">
+    <div className="flex-1 p-4 sm:p-6">
+      <div className="min-w-0">
+        <h3 className="text-base sm:text-lg font-medium text-muted-foreground truncate">
+          {title}
+        </h3>
+        <div
+          className={cn(
+            " sm:text-2xl font-bold tracking-tight truncate mt-1",
+            valueClassName
+          )}
+        >
+          {mainValue}
+        </div>
+        <div className="text-sm sm:text-base text-muted-foreground mt-1 truncate">
+          {subtitleValue ? (
+            <>
+              {subtitleValue} {subtitle}
+            </>
+          ) : (
+            subtitle
+          )}
+        </div>
+      </div>
+    </div>
+  </Card>
+);
+
+const LoadingCard = () => (
+  <Card className="p-4 sm:p-6">
+    <div className="flex items-center space-x-2">
+      <Loader2 className="h-4 w-4 animate-spin" />
+      <span className="text-muted-foreground">Loading...</span>
+    </div>
+  </Card>
+);
+
+const ErrorAlert = ({ message }: { message: string }) => (
+  <Alert variant="destructive">
+    <AlertTriangle className="h-4 w-4" />
+    <AlertTitle>Error</AlertTitle>
+    <AlertDescription>{message}</AlertDescription>
+  </Alert>
+);
+
 const calculateMetrics = (trades: Trade[]): Metrics => {
-  const totalTrades = trades.length;
-  if (totalTrades === 0) {
+  if (trades.length === 0) {
     return {
       totalTrades: 0,
       winningTrades: 0,
@@ -30,6 +89,7 @@ const calculateMetrics = (trades: Trade[]): Metrics => {
     };
   }
 
+  const totalTrades = trades.length;
   const winningTrades = trades.filter((trade) => trade.profit_loss > 0).length;
   const winRate = ((winningTrades / totalTrades) * 100).toFixed(1);
   const totalProfit = trades.reduce(
@@ -38,14 +98,13 @@ const calculateMetrics = (trades: Trade[]): Metrics => {
   );
   const avgTradeProfit = totalProfit / totalTrades;
 
-  // Calculate consecutive wins
-  let maxStreak = 0;
-  let currentStreak = 0;
   const sortedTrades = [...trades].sort(
     (a, b) =>
       new Date(a.entry_date).getTime() - new Date(b.entry_date).getTime()
   );
 
+  let maxStreak = 0;
+  let currentStreak = 0;
   for (const trade of sortedTrades) {
     if (trade.profit_loss > 0) {
       currentStreak++;
@@ -65,28 +124,17 @@ const calculateMetrics = (trades: Trade[]): Metrics => {
   };
 };
 
+const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
+
 export function PerformanceMetrics() {
   const { trades, loading, error } = useTrades();
-
   const metrics = useMemo(() => calculateMetrics(trades), [trades]);
 
   if (loading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Loading...</span>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">...</div>
-            </CardContent>
-          </Card>
+          <LoadingCard key={i} />
         ))}
       </div>
     );
@@ -94,74 +142,53 @@ export function PerformanceMetrics() {
 
   if (error) {
     return (
-      <Alert variant="destructive">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
-        <AlertDescription>
-          Failed to load performance metrics. Please try again later.
-        </AlertDescription>
-      </Alert>
+      <ErrorAlert message="Failed to load performance metrics. Please try again later." />
     );
   }
 
+  const metricsConfig = [
+    {
+      title: "Total Trades",
+      mainValue: metrics.totalTrades.toString(),
+      subtitle: "losers",
+      subtitleValue: `${metrics.winningTrades} winners, ${
+        metrics.totalTrades - metrics.winningTrades
+      }`,
+    },
+    {
+      title: "Win Rate",
+      mainValue: `${metrics.winRate}%`,
+      subtitle: "trades",
+      subtitleValue: `Best streak: ${metrics.consecutiveWins}`,
+    },
+    {
+      title: "Total P/L",
+      mainValue: formatCurrency(metrics.totalProfit),
+      subtitle: "All time profit/loss",
+      valueClassName:
+        metrics.totalProfit >= 0 ? "text-green-500" : "text-red-500",
+    },
+    {
+      title: "Avg Trade",
+      mainValue: formatCurrency(metrics.avgTradeProfit),
+      subtitle: "Per trade average",
+      valueClassName:
+        metrics.avgTradeProfit >= 0 ? "text-green-500" : "text-red-500",
+    },
+  ];
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Trades</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{metrics.totalTrades}</div>
-          <p className="text-xs text-muted-foreground">
-            {metrics.winningTrades} winners,{" "}
-            {metrics.totalTrades - metrics.winningTrades} losers
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{metrics.winRate}%</div>
-          <p className="text-xs text-muted-foreground">
-            Best streak: {metrics.consecutiveWins} trades
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total P/L</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div
-            className={`text-2xl font-bold ${
-              metrics.totalProfit >= 0 ? "text-green-500" : "text-red-500"
-            }`}
-          >
-            ${metrics.totalProfit.toFixed(2)}
-          </div>
-          <p className="text-xs text-muted-foreground">All time profit/loss</p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Avg Trade</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div
-            className={`text-2xl font-bold ${
-              metrics.avgTradeProfit >= 0 ? "text-green-500" : "text-red-500"
-            }`}
-          >
-            ${metrics.avgTradeProfit.toFixed(2)}
-          </div>
-          <p className="text-xs text-muted-foreground">Per trade average</p>
-        </CardContent>
-      </Card>
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      {metricsConfig.map((metric, index) => (
+        <MetricCard
+          key={index}
+          title={metric.title}
+          mainValue={metric.mainValue}
+          subtitle={metric.subtitle}
+          subtitleValue={metric.subtitleValue}
+          valueClassName={metric.valueClassName}
+        />
+      ))}
     </div>
   );
 }

@@ -191,7 +191,7 @@ const PnlCalendar = () => {
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
           <div
             key={day}
-            className="text-center p-2 text-sm font-medium text-muted-foreground"
+            className="text-center p-2  font-medium text-muted-foreground"
           >
             {day}
           </div>
