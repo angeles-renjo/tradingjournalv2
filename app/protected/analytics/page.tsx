@@ -21,7 +21,7 @@ export default async function AnalyticsPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold tracking-tight text-center">
+      <h1 className="text-3xl font-bold tracking-tight text-center mb-4">
         Trading Analytics
       </h1>
       <div className=" lg:space-y-0 lg:grid lg:grid-cols-4 lg:gap-6">
@@ -30,11 +30,11 @@ export default async function AnalyticsPage() {
           <ProfitLossChart />
         </div>
 
-        <div className="lg:col-span-2 my-2">
+        <div className="lg:col-span-2 space-y-2">
           <PnlCalendar />
-        </div>
-        <div className="lg:col-span-2">
-          <GoalProgress />
+          <div>
+            <GoalProgress />
+          </div>
         </div>
       </div>
     </>
