@@ -142,6 +142,11 @@ export type OptionalTradeFields =
 export interface Goal extends BaseEntity {
   user_id: string;
   target_amount: number;
+  achieved: boolean;
+  achieved_at: string | null;
 }
 
-export type GoalInsertData = Omit<Goal, "id" | "created_at" | "updated_at">;
+export type GoalInsertData = Omit<
+  Goal,
+  "id" | "created_at" | "updated_at" | "achieved" | "achieved_at"
+>;
