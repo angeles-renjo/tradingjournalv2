@@ -1,5 +1,3 @@
-// types/index.ts
-
 // Trade direction type
 export type TradeDirection = "long" | "short";
 
@@ -139,14 +137,45 @@ export type OptionalTradeFields =
   | "notes"
   | "screenshots";
 
+// Goal Status type
+export type GoalStatus = "active" | "achieved" | "failed";
+
+// Goal interface
 export interface Goal extends BaseEntity {
   user_id: string;
   target_amount: number;
   achieved: boolean;
   achieved_at: string | null;
+  start_date: string;
+  end_date: string | null;
+  status: GoalStatus;
+  current_progress?: number;
 }
 
-export type GoalInsertData = Omit<
-  Goal,
-  "id" | "created_at" | "updated_at" | "achieved" | "achieved_at"
->;
+// Goal input type for creating/updating goals
+export interface GoalInput {
+  target_amount: number;
+  start_date: string;
+  end_date?: string | null;
+}
+
+// Goal response types
+export interface GoalResponse {
+  data: Goal | null;
+  error: string | null;
+}
+
+export interface GoalsListResponse {
+  data: Goal[] | null;
+  error: string | null;
+}
+
+// Goal validation type
+export interface GoalValidation {
+  isValid: boolean;
+  errors: {
+    target_amount?: string;
+    start_date?: string;
+    end_date?: string;
+  };
+}
