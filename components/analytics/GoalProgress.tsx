@@ -15,7 +15,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -25,9 +24,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTradeData } from "@/context/DataContext";
-import { Target, CheckCircle2, XCircle, Clock, Loader2 } from "lucide-react";
+import {
+  Target,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Loader2,
+  Trash2,
+} from "lucide-react";
+import {
+  getGoals,
+  setGoal,
+  updateGoalStatus,
+  deleteGoal,
+} from "@/app/actions/goals";
 import type { Goal } from "@/types";
-import { getGoals, setGoal, updateGoalStatus } from "@/app/actions/goals";
 
 // Loading Card Component
 const LoadingCard = () => (
@@ -48,8 +59,12 @@ export default function GoalProgress() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [alertInfo, setAlertInfo] = useState<{
+    show: boolean;
+    type: string;
+    message: string;
+  }>({ show: false, type: "", message: "" });
 
   const currentProfit = analytics?.totalProfit || 0;
 
@@ -63,13 +78,20 @@ export default function GoalProgress() {
     }
   }, [currentProfit, goals]);
 
+  const showAlert = (type: string, message: string) => {
+    setAlertInfo({ show: true, type, message });
+    setTimeout(() => {
+      setAlertInfo({ show: false, type: "", message: "" });
+    }, 2000);
+  };
+
   const fetchGoals = async () => {
     try {
       setIsLoading(true);
       const response = await getGoals();
 
       if (response.error) {
-        setError(response.error);
+        showAlert("error", response.error);
         return;
       }
 
@@ -78,7 +100,32 @@ export default function GoalProgress() {
       }
     } catch (err) {
       console.error("Error fetching goals:", err);
-      setError("Failed to fetch goals");
+      showAlert("error", "Failed to fetch goals");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteGoal = async (goalId: string) => {
+    try {
+      setIsLoading(true);
+      const response = await deleteGoal(goalId);
+
+      if (response.error) {
+        showAlert("error", response.error);
+        return;
+      }
+
+      setGoals((prev) => prev.filter((goal) => goal.id !== goalId));
+      setShowDetailsDialog(false);
+      setSelectedGoal(null);
+      showAlert("success", "Goal deleted successfully");
+    } catch (err) {
+      console.error("Error deleting goal:", err);
+      showAlert(
+        "error",
+        err instanceof Error ? err.message : "Failed to delete goal"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -93,6 +140,7 @@ export default function GoalProgress() {
             setGoals((prev) =>
               prev.map((g) => (g.id === goal.id ? response.data! : g))
             );
+            showAlert("success", "Goal achieved! Congratulations!");
           }
         } else if (goal.end_date && new Date(goal.end_date) < new Date()) {
           const response = await updateGoalStatus(goal.id, "failed");
@@ -100,6 +148,7 @@ export default function GoalProgress() {
             setGoals((prev) =>
               prev.map((g) => (g.id === goal.id ? response.data! : g))
             );
+            showAlert("error", "Goal timeline expired");
           }
         }
       }
@@ -114,13 +163,13 @@ export default function GoalProgress() {
 
   const handleAddGoal = async () => {
     if (!targetAmount || !startDate) {
-      setError("Please fill in all required fields");
+      showAlert("error", "Please fill in all required fields");
       return;
     }
 
     const amount = parseFloat(targetAmount);
     if (isNaN(amount) || amount <= 0) {
-      setError("Please enter a valid target amount");
+      showAlert("error", "Please enter a valid target amount");
       return;
     }
 
@@ -133,19 +182,21 @@ export default function GoalProgress() {
       });
 
       if (response.error) {
-        setError(response.error);
-        console.error("Goal creation error:", response.error);
+        showAlert("error", response.error);
       } else if (response.data) {
         setGoals((prev) => [...prev, response.data!]);
         setIsAddingGoal(false);
         resetForm();
-        setError(null);
+        showAlert("success", "Goal created successfully!");
       } else {
-        setError("Failed to create goal: No response data");
+        showAlert("error", "Failed to create goal: No response data");
       }
     } catch (err) {
       console.error("Error adding goal:", err);
-      setError(err instanceof Error ? err.message : "Failed to add goal");
+      showAlert(
+        "error",
+        err instanceof Error ? err.message : "Failed to add goal"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -154,32 +205,6 @@ export default function GoalProgress() {
   const handleViewDetails = (goal: Goal) => {
     setSelectedGoal(goal);
     setShowDetailsDialog(true);
-  };
-
-  const getStatusBadge = (goal: Goal) => {
-    switch (goal.status) {
-      case "active":
-        return (
-          <Badge variant="outline" className="flex gap-2">
-            <Clock className="h-4 w-4" />
-            In Progress
-          </Badge>
-        );
-      case "achieved":
-        return (
-          <Badge variant="default" className="flex gap-2 bg-green-500">
-            <CheckCircle2 className="h-4 w-4" />
-            Achieved
-          </Badge>
-        );
-      case "failed":
-        return (
-          <Badge variant="destructive" className="flex gap-2">
-            <XCircle className="h-4 w-4" />
-            Failed
-          </Badge>
-        );
-    }
   };
 
   const formatDate = (date: string) => {
@@ -227,7 +252,11 @@ export default function GoalProgress() {
                 {goal.end_date ? ` - ${formatDate(goal.end_date)}` : ""}
               </span>
             </TableCell>
-            <TableCell>{getStatusBadge(goal)}</TableCell>
+            <TableCell>
+              <span className="text-sm text-muted-foreground">
+                {goal.status.charAt(0).toUpperCase() + goal.status.slice(1)}
+              </span>
+            </TableCell>
             <TableCell className="text-right">
               <Button
                 variant="outline"
@@ -254,6 +283,26 @@ export default function GoalProgress() {
           <Button>Add Goal</Button>
         </DialogTrigger>
         <DialogContent>
+          {alertInfo.show && (
+            <Alert
+              variant={alertInfo.type === "error" ? "destructive" : "default"}
+              className={`mb-4 ${
+                alertInfo.type === "success"
+                  ? "bg-green-50 border-green-500 text-green-700"
+                  : ""
+              }`}
+            >
+              <AlertTitle>
+                {alertInfo.type === "success" ? (
+                  <CheckCircle2 className="h-4 w-4 inline mr-2" />
+                ) : (
+                  <XCircle className="h-4 w-4 inline mr-2" />
+                )}
+                {alertInfo.type === "success" ? "Success" : "Error"}
+              </AlertTitle>
+              <AlertDescription>{alertInfo.message}</AlertDescription>
+            </Alert>
+          )}
           <DialogHeader>
             <DialogTitle>Create New Goal</DialogTitle>
             <DialogDescription>
@@ -310,17 +359,6 @@ export default function GoalProgress() {
       );
     }
 
-    if (error) {
-      return (
-        <div className="flex h-[300px] items-center justify-center">
-          <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        </div>
-      );
-    }
-
     if (!goals.length) {
       return renderEmptyState();
     }
@@ -329,7 +367,30 @@ export default function GoalProgress() {
   };
 
   return (
-    <>
+    <div className="relative">
+      {alertInfo.show && (
+        <div className="absolute inset-0 flex items-center justify-center z-50">
+          <Alert
+            variant={alertInfo.type === "error" ? "destructive" : "default"}
+            className={`w-[90%] max-w-md shadow-lg ${
+              alertInfo.type === "success"
+                ? "bg-green-50 border-green-500 text-green-700"
+                : ""
+            }`}
+          >
+            <AlertTitle>
+              {alertInfo.type === "success" ? (
+                <CheckCircle2 className="h-4 w-4 inline mr-2" />
+              ) : (
+                <XCircle className="h-4 w-4 inline mr-2" />
+              )}
+              {alertInfo.type === "success" ? "Success" : "Error"}
+            </AlertTitle>
+            <AlertDescription>{alertInfo.message}</AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xl font-semibold">Trading Goals</CardTitle>
@@ -396,6 +457,26 @@ export default function GoalProgress() {
         }}
       >
         <DialogContent className="sm:max-w-[425px]">
+          {alertInfo.show && (
+            <Alert
+              variant={alertInfo.type === "error" ? "destructive" : "default"}
+              className={`mb-4 ${
+                alertInfo.type === "success"
+                  ? "bg-green-50 border-green-500 text-green-700"
+                  : ""
+              }`}
+            >
+              <AlertTitle>
+                {alertInfo.type === "success" ? (
+                  <CheckCircle2 className="h-4 w-4 inline mr-2" />
+                ) : (
+                  <XCircle className="h-4 w-4 inline mr-2" />
+                )}
+                {alertInfo.type === "success" ? "Success" : "Error"}
+              </AlertTitle>
+              <AlertDescription>{alertInfo.message}</AlertDescription>
+            </Alert>
+          )}
           <DialogHeader>
             <DialogTitle>Goal Details</DialogTitle>
           </DialogHeader>
@@ -427,7 +508,9 @@ export default function GoalProgress() {
               </div>
               <div className="grid gap-2">
                 <Label>Status</Label>
-                <div>{getStatusBadge(selectedGoal)}</div>
+                <div className="text-sm text-muted-foreground capitalize">
+                  {selectedGoal.status}
+                </div>
               </div>
               {selectedGoal.achieved && selectedGoal.achieved_at && (
                 <div className="grid gap-2">
@@ -439,7 +522,16 @@ export default function GoalProgress() {
               )}
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex justify-between">
+            <Button
+              variant="destructive"
+              onClick={() => selectedGoal && handleDeleteGoal(selectedGoal.id)}
+              disabled={isLoading}
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Goal
+            </Button>
             <Button
               variant="secondary"
               onClick={() => setShowDetailsDialog(false)}
@@ -449,6 +541,6 @@ export default function GoalProgress() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
