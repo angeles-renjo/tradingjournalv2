@@ -39,6 +39,7 @@ import {
   deleteGoal,
 } from "@/app/actions/goals";
 import type { Goal } from "@/types";
+import { Badge } from "../ui/badge";
 
 // Loading Card Component
 const LoadingCard = () => (
@@ -228,6 +229,37 @@ export default function GoalProgress() {
     return ((currentProfit / goal.target_amount) * 100).toFixed(1);
   };
 
+  const getStatusBadge = (goal: Goal) => {
+    switch (goal.status) {
+      case "active":
+        return (
+          <Badge variant="outline" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            In Progress
+          </Badge>
+        );
+      case "achieved":
+        return (
+          <Badge
+            variant="default"
+            className="flex items-center gap-2 bg-green-500"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            Achieved
+          </Badge>
+        );
+      case "failed":
+        return (
+          <Badge variant="destructive" className="flex items-center gap-2">
+            <XCircle className="h-4 w-4" />
+            Failed
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
   const renderGoalsList = () => (
     <Table>
       <TableHeader>
@@ -252,11 +284,7 @@ export default function GoalProgress() {
                 {goal.end_date ? ` - ${formatDate(goal.end_date)}` : ""}
               </span>
             </TableCell>
-            <TableCell>
-              <span className="text-sm text-muted-foreground">
-                {goal.status.charAt(0).toUpperCase() + goal.status.slice(1)}
-              </span>
-            </TableCell>
+            <TableCell>{getStatusBadge(goal)}</TableCell>
             <TableCell className="text-right">
               <Button
                 variant="outline"
@@ -508,9 +536,7 @@ export default function GoalProgress() {
               </div>
               <div className="grid gap-2">
                 <Label>Status</Label>
-                <div className="text-sm text-muted-foreground capitalize">
-                  {selectedGoal.status}
-                </div>
+                <div>{getStatusBadge(selectedGoal)}</div>
               </div>
               {selectedGoal.achieved && selectedGoal.achieved_at && (
                 <div className="grid gap-2">
