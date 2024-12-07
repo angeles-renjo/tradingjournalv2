@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,30 +25,39 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTradeData } from "@/context/DataContext";
-import { Target, CheckCircle2, XCircle, Clock } from "lucide-react";
-import LoadingSpinner from "@/components/LoadingSpinner";
+import { Target, CheckCircle2, XCircle, Clock, Loader2 } from "lucide-react";
 import type { Goal } from "@/types";
 import { getGoals, setGoal, updateGoalStatus } from "@/app/actions/goals";
 
+// Loading Card Component
+const LoadingCard = () => (
+  <Card className="p-4 sm:p-6">
+    <div className="flex items-center space-x-2">
+      <Loader2 className="h-4 w-4 animate-spin" />
+      <span className="text-muted-foreground">Loading...</span>
+    </div>
+  </Card>
+);
+
 export default function GoalProgress() {
   const { analytics } = useTradeData();
-  const [goals, setGoals] = React.useState<Goal[]>([]);
-  const [isAddingGoal, setIsAddingGoal] = React.useState(false);
-  const [showDetailsDialog, setShowDetailsDialog] = React.useState(false);
-  const [targetAmount, setTargetAmount] = React.useState("");
-  const [startDate, setStartDate] = React.useState("");
-  const [endDate, setEndDate] = React.useState("");
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [selectedGoal, setSelectedGoal] = React.useState<Goal | null>(null);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [isAddingGoal, setIsAddingGoal] = useState(false);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [targetAmount, setTargetAmount] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
 
   const currentProfit = analytics?.totalProfit || 0;
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchGoals();
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (currentProfit > 0 && goals.length > 0) {
       checkGoalsProgress();
     }
@@ -125,13 +134,12 @@ export default function GoalProgress() {
 
       if (response.error) {
         setError(response.error);
-        // Don't return here, let it hit the finally block
         console.error("Goal creation error:", response.error);
       } else if (response.data) {
         setGoals((prev) => [...prev, response.data!]);
         setIsAddingGoal(false);
         resetForm();
-        setError(null); // Clear any existing errors
+        setError(null);
       } else {
         setError("Failed to create goal: No response data");
       }
@@ -296,8 +304,8 @@ export default function GoalProgress() {
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div className="flex h-[300px] items-center justify-center">
-          <LoadingSpinner />
+        <div className="grid gap-4 grid-cols-1">
+          <LoadingCard />
         </div>
       );
     }
