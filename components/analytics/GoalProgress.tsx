@@ -110,40 +110,19 @@ export default function GoalProgress() {
   const handleDeleteGoal = async (goalId: string) => {
     try {
       setIsLoading(true);
-      console.log("Attempting to delete goal:", goalId);
-
       const response = await deleteGoal(goalId);
-      console.log("Delete response:", response);
 
       if (response.error) {
-        console.error("Delete error:", response.error);
         showAlert("error", response.error);
         return;
       }
 
-      if (response.success) {
-        console.log("Delete successful, updating UI...");
-        setGoals((prev) => {
-          const newGoals = prev.filter((goal) => goal.id !== goalId);
-          console.log("Updated goals:", newGoals);
-          return newGoals;
-        });
-        setShowDetailsDialog(false);
-        setSelectedGoal(null);
-        showAlert("success", "Goal deleted successfully");
-
-        // Verify deletion by refetching goals
-        const refreshedGoals = await getGoals();
-        console.log("Refreshed goals:", refreshedGoals);
-        if (refreshedGoals.data) {
-          setGoals(refreshedGoals.data);
-        }
-      } else {
-        console.error("Delete operation did not return success");
-        showAlert("error", "Failed to delete goal");
-      }
+      setGoals((prev) => prev.filter((goal) => goal.id !== goalId));
+      setShowDetailsDialog(false);
+      setSelectedGoal(null);
+      showAlert("success", "Goal deleted successfully");
     } catch (err) {
-      console.error("Error in handleDeleteGoal:", err);
+      console.error("Error deleting goal:", err);
       showAlert(
         "error",
         err instanceof Error ? err.message : "Failed to delete goal"

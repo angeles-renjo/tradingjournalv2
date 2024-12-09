@@ -213,7 +213,7 @@ export async function getGoalById(goalId: string): Promise<GoalResponse> {
  */
 export async function deleteGoal(
   goalId: string
-): Promise<{ success: boolean; error: string | null }> {
+): Promise<{ error: string | null }> {
   try {
     const supabase = await createClient();
 
@@ -222,58 +222,24 @@ export async function deleteGoal(
       error: userError,
     } = await supabase.auth.getUser();
 
-    if (userError) {
-      console.error("Auth error:", userError);
-      return { success: false, error: "Authentication failed" };
-    }
-    if (!user) {
-      console.error("No user found");
-      return { success: false, error: "No authenticated user found" };
-    }
+    if (userError) return { error: "Authentication failed" };
+    if (!user) return { error: "No authenticated user found" };
 
-    // First verify the goal exists and belongs to the user
-    const { data: goalExists, error: checkError } = await supabase
-      .from("goals")
-      .select("id")
-      .eq("id", goalId)
-      .eq("user_id", user.id)
-      .single();
-
-    if (checkError) {
-      console.error("Check error:", checkError);
-      return { success: false, error: "Goal not found or access denied" };
-    }
-
-    if (!goalExists) {
-      console.error("Goal not found");
-      return { success: false, error: "Goal not found" };
-    }
-
-    // Perform the delete operation
-    const { data, error: deleteError } = await supabase
+    const { error: deleteError } = await supabase
       .from("goals")
       .delete()
       .eq("id", goalId)
-      .eq("user_id", user.id)
-      .select(); // Add .select() to return the deleted row
+      .eq("user_id", user.id);
 
     if (deleteError) {
       console.error("Delete error:", deleteError);
-      return { success: false, error: "Failed to delete goal" };
+      return { error: "Failed to delete goal" };
     }
 
-    // Log the deleted data to verify
-    console.log("Deleted goal data:", data);
-
-    // If we get here, the deletion was successful
-    return { success: true, error: null };
+    return { error: null };
   } catch (error) {
     console.error("Unexpected error in deleteGoal:", error);
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "An unexpected error occurred",
-    };
+    return { error: "An unexpected error occurred" };
   }
 }
 
