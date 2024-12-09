@@ -1,37 +1,37 @@
-"use client";
+// app/protected/page.tsx
+import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
+import TradeProviderClient from "@/components/providers/TradeProviderClient";
+import { MetricsSection } from "./dashboard/_components/metrics-section";
+import { ActionCards } from "./dashboard/_components/action-cards";
+import { RecentTradesSection } from "./dashboard/_components/recent-trades-section";
 
-import { createClient } from "@/utils/supabase/client";
-import Dashboard from "@/components/Dashboard";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { TradeOperationsProvider } from "@/context/OperationsContext";
+export default async function ProtectedPage() {
+  const supabase = await createClient();
 
-export default function ProtectedPage() {
-  const [userId, setUserId] = useState<string | null>(null);
-  const router = useRouter();
-  const supabase = createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
-      if (error || !user) {
-        router.push("/sign-in");
-      } else {
-        setUserId(user.id);
-      }
-    };
-
-    checkUser();
-  }, [router, supabase.auth]);
-
-  if (!userId) return null;
+  if (error || !user) {
+    redirect("/sign-in");
+  }
 
   return (
-    <TradeOperationsProvider userId={userId}>
-      <Dashboard />
-    </TradeOperationsProvider>
+    <TradeProviderClient userId={user.id}>
+      <div className="container mx-auto p-6">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2">Trading Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-300">
+            Track, analyze, and improve your trading performance
+          </p>
+        </div>
+
+        <ActionCards />
+        <MetricsSection userId={user.id} />
+        <RecentTradesSection userId={user.id} />
+      </div>
+    </TradeProviderClient>
   );
 }
