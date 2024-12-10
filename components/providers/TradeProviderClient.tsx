@@ -6,7 +6,11 @@ import { TradeDataProvider } from "@/context/DataContext";
 import { TradeOperationsProvider } from "@/context/OperationsContext";
 import { RealtimeProvider } from "@/context/RealTimeContext";
 import { TradeProvider } from "@/context/TradeContext";
-import LoadingSpinner from "@/components/LoadingSpinner"; // Add this import
+import LoadingSpinner from "@/components/LoadingSpinner";
+import Loading from "@/app/protected/loading";
+import { getTradesByUser } from "@/app/actions/trades";
+import { getTradeAnalytics } from "@/app/actions/analytics";
+import type { Trade, Analytics } from "@/types";
 
 function DataInitializer({
   userId,
@@ -16,20 +20,21 @@ function DataInitializer({
   children: React.ReactNode;
 }) {
   const [isInitialized, setIsInitialized] = useState(false);
+  const [initialData, setInitialData] = useState<{
+    trades: Trade[];
+    analytics: Analytics;
+  } | null>(null);
 
   useEffect(() => {
     const initializeData = async () => {
-      const supabase = createClient();
       try {
-        const { data: tradesData, error: tradesError } = await supabase
-          .from("trades")
-          .select("*")
-          .eq("user_id", userId)
-          .order("entry_date", { ascending: false });
+        const [trades, analytics] = await Promise.all([
+          getTradesByUser(userId),
+          getTradeAnalytics(userId),
+        ]);
 
-        if (!tradesError && tradesData) {
-          setIsInitialized(true);
-        }
+        setInitialData({ trades, analytics });
+        setIsInitialized(true);
       } catch (error) {
         console.error("Error initializing data:", error);
       }
@@ -40,11 +45,19 @@ function DataInitializer({
     }
   }, [userId, isInitialized]);
 
-  if (!isInitialized) {
-    return <LoadingSpinner message="Loading trade data..." />;
+  if (!isInitialized || !initialData) {
+    return <Loading />;
   }
 
-  return <>{children}</>;
+  return (
+    <TradeDataProvider initialData={initialData}>
+      <TradeOperationsProvider userId={userId}>
+        <RealtimeProvider userId={userId}>
+          <TradeProvider>{children}</TradeProvider>
+        </RealtimeProvider>
+      </TradeOperationsProvider>
+    </TradeDataProvider>
+  );
 }
 
 export default function TradeProviderClient({
@@ -71,15 +84,5 @@ export default function TradeProviderClient({
   if (loading) return <LoadingSpinner message="Authenticating..." />;
   if (!userId) return <>{children}</>;
 
-  return (
-    <TradeDataProvider>
-      <TradeOperationsProvider userId={userId}>
-        <RealtimeProvider userId={userId}>
-          <TradeProvider>
-            <DataInitializer userId={userId}>{children}</DataInitializer>
-          </TradeProvider>
-        </RealtimeProvider>
-      </TradeOperationsProvider>
-    </TradeDataProvider>
-  );
+  return <DataInitializer userId={userId}>{children}</DataInitializer>;
 }

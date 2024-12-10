@@ -18,10 +18,25 @@ const TradeDataContext = createContext<TradeDataContextType | undefined>(
   undefined
 );
 
-export function TradeDataProvider({ children }: { children: React.ReactNode }) {
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+interface TradeDataProviderProps {
+  children: React.ReactNode;
+  initialData?: {
+    trades: Trade[];
+    analytics: Analytics;
+  };
+}
+
+export function TradeDataProvider({
+  children,
+  initialData,
+}: TradeDataProviderProps) {
+  const [trades, setTrades] = useState<Trade[]>(initialData?.trades || []);
+  const [recentTrades, setRecentTrades] = useState<Trade[]>(
+    initialData?.trades?.slice(0, 5) || []
+  );
+  const [analytics, setAnalytics] = useState<Analytics | null>(
+    initialData?.analytics || null
+  );
   const [goalTarget, setGoalTarget] = useState<number | null>(() => {
     // Initialize from localStorage if available
     if (typeof window !== "undefined") {
