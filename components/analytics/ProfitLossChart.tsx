@@ -1,10 +1,8 @@
-// ProfitLossChart.tsx
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, Loader2 } from "lucide-react";
-import { useMemo } from "react";
+import { AlertTriangle } from "lucide-react";
 import { useTrades } from "@/context/TradeContext";
 import {
   LineChart,
@@ -45,29 +43,8 @@ const transformTradeData = (trades: Trade[]): ChartDataPoint[] => {
 };
 
 export function ProfitLossChart() {
-  const { trades, loading, error } = useTrades();
-
-  const chartData = useMemo(() => transformTradeData(trades), [trades]);
-
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Balance</CardTitle>
-        </CardHeader>
-        <CardContent className="h-72">
-          <div className="flex items-center justify-center h-full">
-            <div className="flex flex-col items-center space-y-2">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                Loading chart data...
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const { trades, error } = useTrades();
+  const chartData = transformTradeData(trades);
 
   if (error) {
     return (

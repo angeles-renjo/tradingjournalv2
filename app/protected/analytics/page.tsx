@@ -4,7 +4,6 @@ import { PerformanceMetrics } from "@/components/analytics/PerformanceMetrics";
 import { ProfitLossChart } from "@/components/analytics/ProfitLossChart";
 import { redirect } from "next/navigation";
 import PnlCalendar from "@/components/analytics/PnlCalendar";
-import { Goal } from "lucide-react";
 import GoalProgress from "@/components/analytics/GoalProgress";
 
 export default async function AnalyticsPage() {

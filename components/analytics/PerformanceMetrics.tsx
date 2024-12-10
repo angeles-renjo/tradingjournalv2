@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useTrades } from "@/context/TradeContext";
@@ -56,15 +55,6 @@ const MetricCard = ({
           )}
         </div>
       </div>
-    </div>
-  </Card>
-);
-
-const LoadingCard = () => (
-  <Card className="p-4 sm:p-6">
-    <div className="flex items-center space-x-2">
-      <Loader2 className="h-4 w-4 animate-spin" />
-      <span className="text-muted-foreground">Loading...</span>
     </div>
   </Card>
 );
@@ -128,17 +118,7 @@ const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
 
 export function PerformanceMetrics() {
   const { trades, loading, error } = useTrades();
-  const metrics = useMemo(() => calculateMetrics(trades), [trades]);
-
-  if (loading) {
-    return (
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <LoadingCard key={i} />
-        ))}
-      </div>
-    );
-  }
+  const metrics = calculateMetrics(trades);
 
   if (error) {
     return (
