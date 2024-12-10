@@ -13,9 +13,9 @@ function MetricsLoadingSkeleton() {
         >
           <div className="flex-1 p-4 sm:p-6">
             <div className="min-w-0">
-              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-5 w-26" />
               <Skeleton className="h-8 w-24 mt-2" />
-              <Skeleton className="h-4 w-40 mt-2" />
+              <Skeleton className="h-4 w-12 mt-2" />
             </div>
           </div>
         </Card>
