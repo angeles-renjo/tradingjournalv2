@@ -89,3 +89,64 @@ export async function uploadTradeScreenshots(
     } as ApiError;
   }
 }
+export async function updateTrade(
+  tradeId: string,
+  data: Partial<TradeInsertData>
+): Promise<Trade> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw { message: "Not authenticated", code: "AUTH_ERROR" } as ApiError;
+  }
+
+  const { data: trade, error } = await supabase
+    .from("trades")
+    .update(data)
+    .eq("id", tradeId)
+    .eq("user_id", user.id) // Security check
+    .select()
+    .single();
+
+  if (error) {
+    throw {
+      message: error.message,
+      code: "DB_ERROR",
+      details: error,
+    } as ApiError;
+  }
+
+  revalidatePath("/protected");
+  return trade as Trade;
+}
+
+export async function deleteTrade(tradeId: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw { message: "Not authenticated", code: "AUTH_ERROR" } as ApiError;
+  }
+
+  const { error } = await supabase
+    .from("trades")
+    .delete()
+    .eq("id", tradeId)
+    .eq("user_id", user.id); // Security check
+
+  if (error) {
+    throw {
+      message: error.message,
+      code: "DB_ERROR",
+      details: error,
+    } as ApiError;
+  }
+
+  revalidatePath("/protected");
+}

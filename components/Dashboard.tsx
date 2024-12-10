@@ -54,7 +54,7 @@ export default function Dashboard() {
           </Card>
         </Link>
 
-        <Link href="/journal">
+        <Link href="/protected/journal">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardContent className="pt-6">
               <div className="flex items-center space-x-4">
