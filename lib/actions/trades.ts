@@ -1,7 +1,13 @@
 "use server";
 
 import { createClient } from "@/lib/utils/supabase/server";
-import type { TradeInsertData, Trade, ApiError } from "@/types";
+import type {
+  TradeInsertData,
+  Trade,
+  ApiError,
+  TradeDirection,
+  TradeSetupType,
+} from "@/types";
 import { revalidatePath } from "next/cache";
 
 export async function createTrade(data: TradeInsertData): Promise<{
@@ -121,5 +127,114 @@ export async function uploadTradeScreenshots(
       code: "STORAGE_ERROR",
       details: error,
     } as ApiError;
+  }
+}
+
+export async function deleteTrade(id: string): Promise<{
+  error: ApiError | null;
+}> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.from("trades").delete().eq("id", id);
+
+    if (error) {
+      return {
+        error: {
+          message: error.message,
+          code: "DB_ERROR",
+          details: error,
+        },
+      };
+    }
+
+    revalidatePath("/protected/journal");
+    return { error: null };
+  } catch (error) {
+    return {
+      error: {
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        code: "UNKNOWN_ERROR",
+      },
+    };
+  }
+}
+
+export async function getFilteredTrades(
+  userId: string,
+  filters: {
+    direction?: TradeDirection | "all";
+    setupType?: TradeSetupType | "all";
+    dateRange?: {
+      from: Date | null;
+      to: Date | null;
+    };
+    profitRange?: {
+      min: string;
+      max: string;
+    };
+  }
+): Promise<{
+  data: Trade[] | null;
+  error: ApiError | null;
+}> {
+  try {
+    const supabase = await createClient();
+    let query = supabase.from("trades").select("*").eq("user_id", userId);
+
+    // Apply filters
+    if (filters.direction && filters.direction !== "all") {
+      query = query.eq("direction", filters.direction);
+    }
+
+    if (filters.setupType && filters.setupType !== "all") {
+      query = query.eq("setup_type", filters.setupType);
+    }
+
+    if (filters.dateRange?.from) {
+      query = query.gte("entry_date", filters.dateRange.from.toISOString());
+    }
+
+    if (filters.dateRange?.to) {
+      query = query.lte("entry_date", filters.dateRange.to.toISOString());
+    }
+
+    if (filters.profitRange?.min) {
+      query = query.gte("profit_loss", parseFloat(filters.profitRange.min));
+    }
+
+    if (filters.profitRange?.max) {
+      query = query.lte("profit_loss", parseFloat(filters.profitRange.max));
+    }
+
+    const { data: trades, error } = await query.order("entry_date", {
+      ascending: false,
+    });
+
+    if (error) {
+      return {
+        data: null,
+        error: {
+          message: error.message,
+          code: "DB_ERROR",
+          details: error,
+        },
+      };
+    }
+
+    return { data: trades as Trade[], error: null };
+  } catch (error) {
+    return {
+      data: null,
+      error: {
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        code: "UNKNOWN_ERROR",
+      },
+    };
   }
 }

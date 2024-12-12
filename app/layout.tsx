@@ -5,6 +5,8 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { hasEnvVars } from "@/lib/utils/supabase/check-env-vars";
 import { GeistSans } from "geist/font/sans";
 import { ThemeProvider } from "next-themes";
+import { Toaster } from "@/components/ui/toaster";
+
 import Link from "next/link";
 import "./globals.css";
 
@@ -43,6 +45,7 @@ export default function RootLayout({
               </nav>
 
               <div className="flex flex-col  w-full p-5 ">{children}</div>
+              <Toaster />
 
               <footer className="w-full border-t py-16">
                 <div className="flex justify-center items-center gap-8 text-xs">
