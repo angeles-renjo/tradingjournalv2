@@ -36,7 +36,7 @@ export default async function AnalyticsPage() {
         Trading Analytics
       </h1>
       <div className="lg:space-y-0 lg:grid lg:grid-cols-4 lg:gap-6">
-        <div className="space-y-6 lg:col-span-2 flex flex-col justify-around my-2">
+        <div className="space-y-6 lg:col-span-2 flex flex-col  my-2">
           <PerformanceMetrics analytics={analytics} />
           <ProfitLossChart trades={trades} />
         </div>

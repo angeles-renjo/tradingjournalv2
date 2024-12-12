@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Analytics } from "@/types";
 
 interface MetricsGridProps {
-  analytics: Analytics;
+  analytics: Analytics | null;
 }
 
 export default function MetricsGrid({ analytics }: MetricsGridProps) {

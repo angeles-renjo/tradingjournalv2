@@ -35,9 +35,9 @@ export default async function ProtectedPage() {
       </div>
 
       {/* Metrics Grid */}
-      {/* <Suspense fallback={<MetricsGridSkeleton />}>
+      <Suspense fallback={<MetricsGridSkeleton />}>
         <MetricsGrid analytics={analytics} />
-      </Suspense> */}
+      </Suspense>
 
       {/* Recent Trades */}
       <Suspense fallback={<RecentTradesSkeleton />}>
