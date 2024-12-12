@@ -1,28 +1,48 @@
-"use client";
+import { Suspense } from "react";
+import { Card } from "@/components/ui/card";
+import { getAuthenticatedUser } from "@/lib/utils/db";
+import { getTradeAnalytics } from "@/lib/actions";
+import { getTradesByUser } from "@/lib/actions/";
+import NavLinks from "@/components/dashboard/nav-cards";
+import MetricsGrid, {
+  MetricsGridSkeleton,
+} from "@/components/dashboard/metrics-grid";
+import RecentTrades, {
+  RecentTradesSkeleton,
+} from "@/components/dashboard/recent-trades";
+import { TradeEntryForm } from "@/components/dashboard/trades/trade-entry-form";
 
-import Dashboard from "@/components/Dashboard";
-import { createClient } from "@/utils/supabase/client";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+export default async function ProtectedPage() {
+  const user = await getAuthenticatedUser();
+  const { data: analytics } = await getTradeAnalytics(user.id);
+  const { data: trades } = await getTradesByUser(user.id);
 
-export default function ProtectedPage() {
-  const router = useRouter();
-  const supabase = createClient();
+  return (
+    <div className="container mx-auto p-6">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold mb-2">Trading Dashboard</h1>
+        <p className="text-gray-600 dark:text-gray-300">
+          Track, analyze, and improve your trading performance
+        </p>
+      </div>
 
-  // Simple effect to get userId for the providers
-  useEffect(() => {
-    const checkUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      {/* Navigation Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <Card className="hover:shadow-lg transition-shadow">
+          <TradeEntryForm userId={user.id} />
+        </Card>
+        <NavLinks />
+      </div>
 
-      if (!user) {
-        router.push("/sign-in");
-      }
-    };
+      {/* Metrics Grid */}
+      {/* <Suspense fallback={<MetricsGridSkeleton />}>
+        <MetricsGrid analytics={analytics} />
+      </Suspense> */}
 
-    checkUser();
-  }, [router]);
-
-  return <Dashboard />;
+      {/* Recent Trades */}
+      <Suspense fallback={<RecentTradesSkeleton />}>
+        <RecentTrades trades={trades ?? []} />
+      </Suspense>
+    </div>
+  );
 }

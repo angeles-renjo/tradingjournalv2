@@ -52,7 +52,7 @@ export async function getGoals(): Promise<GoalsListResponse> {
 /**
  * Create a new goal
  */
-export async function createGoal(goalInput: GoalInput): Promise<GoalResponse> {
+export async function setGoal(goalInput: GoalInput): Promise<GoalResponse> {
   try {
     const supabase = await createClient();
     const {
@@ -221,6 +221,43 @@ export async function checkGoalsProgress(
   } catch (error) {
     return {
       data: null,
+      error:
+        error instanceof Error ? error.message : "An unexpected error occurred",
+    };
+  }
+}
+
+/**
+ * Delete a goal
+ */
+export async function deleteGoal(
+  goalId: string
+): Promise<{ error: string | null }> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return { error: "Authentication failed" };
+    }
+
+    const { error: deleteError } = await supabase
+      .from("goals")
+      .delete()
+      .eq("id", goalId)
+      .eq("user_id", user.id); // Security check: ensure user owns the goal
+
+    if (deleteError) {
+      return { error: deleteError.message };
+    }
+
+    revalidatePath("/protected");
+    return { error: null };
+  } catch (error) {
+    return {
       error:
         error instanceof Error ? error.message : "An unexpected error occurred",
     };

@@ -1,7 +1,6 @@
-// Trade direction type
+// Basic types
 export type TradeDirection = "long" | "short";
 
-// Trade setup types
 export type TradeSetupType =
   | "breakout"
   | "trend-following"
@@ -9,25 +8,14 @@ export type TradeSetupType =
   | "range"
   | "other";
 
-// Trading experience levels
-export type TradingExperience = "beginner" | "intermediate" | "advanced";
-
-// Base interface for common fields
+// Base interface for database entities
 export interface BaseEntity {
   id: string;
   created_at: string;
   updated_at: string;
 }
 
-// Profile interface
-export interface Profile extends BaseEntity {
-  user_id: string;
-  username: string;
-  trading_experience: TradingExperience;
-  preferred_markets: string[];
-}
-
-// Trade form data interface
+// Trade related interfaces
 export interface TradeFormData {
   instrument: string;
   direction: TradeDirection;
@@ -43,7 +31,6 @@ export interface TradeFormData {
   screenshots: File[];
 }
 
-// Trade database record interface
 export interface Trade extends BaseEntity {
   user_id: string;
   instrument: string;
@@ -62,10 +49,9 @@ export interface Trade extends BaseEntity {
   screenshots: string[];
 }
 
-// Trade data for insertion
 export type TradeInsertData = Omit<Trade, "id" | "created_at" | "updated_at">;
 
-// Analytics interface
+// Analytics interfaces
 export interface Analytics {
   totalTrades: number;
   winRate: number;
@@ -76,71 +62,9 @@ export interface Analytics {
   goalTarget: number | null;
 }
 
-// Props interfaces
-export interface TradeEntryFormProps {
-  userId: string;
-  onTradeAdded?: () => void;
-}
-
-export interface DashboardProps {
-  userId: string;
-}
-
-// Utility interfaces for recent trades
-export interface RecentTrade {
-  id: string;
-  entry_date: string;
-  instrument: string;
-  direction: string;
-  profit_loss: number;
-}
-
-// Database response types
-export interface SupabaseResponse<T> {
-  data: T | null;
-  error: {
-    message: string;
-  } | null;
-}
-
-// Trade psychology interfaces
-export interface TradePsychology extends BaseEntity {
-  trade_id: string;
-  pre_trade_emotion: string;
-  post_trade_emotion: string;
-  confidence_level: number;
-  notes: string;
-  lessons_learned: string;
-}
-
-// Error handling interfaces
-export interface ApiError {
-  message: string;
-  code?: string;
-  details?: unknown;
-}
-
-// Validation interfaces
-export interface ValidationResult {
-  isValid: boolean;
-  errors: Record<string, string>;
-}
-
-export type TradeValidationFields = {
-  [K in keyof TradeFormData]: boolean;
-};
-
-// Optional trade fields type
-export type OptionalTradeFields =
-  | "stop_loss"
-  | "take_profit"
-  | "notes"
-  | "screenshots";
-
-// Goal Status type
+// Goal related types
 export type GoalStatus = "active" | "achieved" | "failed";
 
-// Goal interface
 export interface Goal extends BaseEntity {
   user_id: string;
   target_amount: number;
@@ -152,14 +76,12 @@ export interface Goal extends BaseEntity {
   current_progress?: number;
 }
 
-// Goal input type for creating/updating goals
 export interface GoalInput {
   target_amount: number;
   start_date: string;
   end_date?: string | null;
 }
 
-// Goal response types
 export interface GoalResponse {
   data: Goal | null;
   error: string | null;
@@ -170,12 +92,28 @@ export interface GoalsListResponse {
   error: string | null;
 }
 
-// Goal validation type
-export interface GoalValidation {
-  isValid: boolean;
-  errors: {
-    target_amount?: string;
-    start_date?: string;
-    end_date?: string;
-  };
+// Component Props
+export interface GoalProgressProps {
+  initialGoals: Goal[];
+  currentProfit: number;
+}
+
+// UI State types
+export interface AlertInfo {
+  show: boolean;
+  type: "success" | "error";
+  message: string;
+}
+
+export interface GoalFormData {
+  targetAmount: string;
+  startDate: string;
+  endDate: string;
+}
+
+// Error handling
+export interface ApiError {
+  message: string;
+  code?: string;
+  details?: unknown;
 }

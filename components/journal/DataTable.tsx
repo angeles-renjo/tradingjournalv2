@@ -17,7 +17,7 @@ import { ChevronDown, ChevronRight, ArrowUpDown } from "lucide-react";
 import { FilterValues } from "./TableFilters";
 import { TablePagination } from "./TablePagination";
 import { TableActions } from "./TableActions";
-import { deleteTrade } from "@/app/actions/trades";
+import { deleteTrade } from "@/lib/actions/trades";
 
 interface DataTableProps {
   columns: Column[];

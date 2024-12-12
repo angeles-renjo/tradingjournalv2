@@ -2,13 +2,11 @@
 import { EnvVarWarning } from "@/components/env-var-warning";
 import HeaderAuth from "@/components/header-auth";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { hasEnvVars } from "@/utils/supabase/check-env-vars";
+import { hasEnvVars } from "@/lib/utils/supabase/check-env-vars";
 import { GeistSans } from "geist/font/sans";
 import { ThemeProvider } from "next-themes";
-import { TradeProvider } from "@/context/TradeContext";
 import Link from "next/link";
 import "./globals.css";
-import TradeProviderClient from "@/components/providers/TradeProviderClient";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -44,9 +42,7 @@ export default function RootLayout({
                 </div>
               </nav>
 
-              <div className="flex flex-col  w-full p-5 ">
-                <TradeProviderClient>{children}</TradeProviderClient>
-              </div>
+              <div className="flex flex-col  w-full p-5 ">{children}</div>
 
               <footer className="w-full border-t py-16">
                 <div className="flex justify-center items-center gap-8 text-xs">
