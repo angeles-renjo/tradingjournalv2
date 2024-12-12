@@ -1,24 +1,37 @@
 import { getTradesByUser } from "@/lib/actions/trades";
 import { getTradeAnalytics } from "@/lib/actions/analytics";
+import { getGoals } from "@/lib/actions/goals";
 import { PerformanceMetrics } from "@/components/analytics/performance-metrics";
 import { ProfitLossChart } from "@/components/analytics/profit-loss-chart";
-import { PnlCalendar } from "@/components/analytics/PnlCalendar";
-import { GoalProgress } from "@/components/analytics/GoalProgress";
+import { PnlCalendar } from "@/components/analytics/pnl-calendar";
+import { GoalProgress } from "@/components/analytics/goal-progress/goal-progress";
 import { getAuthenticatedUser } from "@/lib/utils/db";
 
 export default async function AnalyticsPage() {
   const user = await getAuthenticatedUser();
-  const [{ data: analytics }, { data: trades }] = await Promise.all([
+
+  const [analyticsResult, tradesResult, goalsResult] = await Promise.all([
     getTradeAnalytics(user.id),
     getTradesByUser(user.id),
+    getGoals(),
   ]);
 
-  if (!analytics || !trades) {
+  const analytics = analyticsResult.data;
+  const trades = tradesResult.data ?? [];
+  const goals = goalsResult.data ?? [];
+
+  if (!analytics) {
     throw new Error("Failed to load analytics data");
   }
 
+  // Calculate current profit from trades
+  const currentProfit = trades.reduce(
+    (sum, trade) => sum + trade.profit_loss,
+    0
+  );
+
   return (
-    <>
+    <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold tracking-tight text-center mb-4">
         Trading Analytics
       </h1>
@@ -29,12 +42,10 @@ export default async function AnalyticsPage() {
         </div>
 
         <div className="lg:col-span-2 space-y-2">
-          <PnlCalendar />
-          <div>
-            <GoalProgress />
-          </div>
+          <PnlCalendar trades={trades} />
+          <GoalProgress initialGoals={goals} currentProfit={currentProfit} />
         </div>
       </div>
-    </>
+    </div>
   );
 }

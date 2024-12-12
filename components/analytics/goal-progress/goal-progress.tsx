@@ -11,25 +11,7 @@ import { GoalProgressForm } from "./goal-progress-form";
 import { GoalProgressList } from "./goal-progress-list";
 import { GoalProgressDetails } from "./goal-progress-details";
 
-/*************  ✨ Codeium Command ⭐  *************/
-/**
- * Component for managing and displaying trading goals progress.
- *
- * @param {GoalProgressProps} props - The properties object.
- * @param {Goal[]} props.initialGoals - Initial list of goals.
- * @param {number} props.currentProfit - Current profit amount to evaluate goal progress.
- *
- * @returns {JSX.Element} The rendered component.
- *
- * The component provides functionality to:
- * - Display a list of trading goals.
- * - Add new trading goals with a specified target amount and timeline.
- * - Delete existing goals.
- * - Automatically check and update the status of goals based on current profit
- *   and timelines, marking them as 'achieved' or 'failed' as appropriate.
- * - Show alerts for success or error actions such as creating or deleting goals.
- */
-/******  6106b14b-c4f7-4059-ae6d-06ce597e01c9  *******/ export function GoalProgress({
+export function GoalProgress({
   initialGoals,
   currentProfit,
 }: GoalProgressProps) {
