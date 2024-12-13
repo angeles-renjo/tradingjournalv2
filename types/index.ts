@@ -8,6 +8,15 @@ export type TradeSetupType =
   | "range"
   | "other";
 
+// Add this constant
+export const SETUP_TYPES: TradeSetupType[] = [
+  "breakout",
+  "trend-following",
+  "reversal",
+  "range",
+  "other",
+];
+
 // Base interface for database entities
 export interface BaseEntity {
   id: string;
@@ -116,4 +125,21 @@ export interface ApiError {
   message: string;
   code?: string;
   details?: unknown;
+}
+
+// Add new type for edit form
+export interface TradeUpdateData {
+  id: string;
+  instrument: string;
+  direction: TradeDirection;
+  entry_price: number;
+  exit_price: number;
+  position_size: number;
+  stop_loss?: number | null;
+  take_profit?: number | null;
+  setup_type: TradeSetupType;
+  notes?: string | null;
+  entry_date: string;
+  exit_date: string;
+  screenshots: string[];
 }

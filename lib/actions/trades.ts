@@ -7,6 +7,7 @@ import type {
   ApiError,
   TradeDirection,
   TradeSetupType,
+  TradeUpdateData,
 } from "@/types";
 import { revalidatePath } from "next/cache";
 
@@ -225,6 +226,63 @@ export async function getFilteredTrades(
     }
 
     return { data: trades as Trade[], error: null };
+  } catch (error) {
+    return {
+      data: null,
+      error: {
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        code: "UNKNOWN_ERROR",
+      },
+    };
+  }
+}
+
+export async function updateTrade(
+  id: string,
+  data: TradeUpdateData
+): Promise<{
+  data: Trade | null;
+  error: ApiError | null;
+}> {
+  try {
+    const supabase = await createClient();
+
+    // Calculate profit/loss before update
+    const profitLoss =
+      (data.exit_price - data.entry_price) * data.position_size;
+    const profitLossPercentage =
+      ((data.exit_price - data.entry_price) / data.entry_price) * 100;
+
+    // Prepare update data
+    const updateData = {
+      ...data,
+      profit_loss: profitLoss,
+      profit_loss_percentage: profitLossPercentage,
+    };
+
+    const { data: trade, error } = await supabase
+      .from("trades")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      return {
+        data: null,
+        error: {
+          message: error.message,
+          code: "DB_ERROR",
+          details: error,
+        },
+      };
+    }
+
+    revalidatePath("/protected");
+    return { data: trade as Trade, error: null };
   } catch (error) {
     return {
       data: null,

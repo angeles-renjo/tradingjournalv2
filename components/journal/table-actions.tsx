@@ -22,7 +22,7 @@ import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { Trade } from "@/types";
 import { deleteTrade } from "@/lib/actions/trades";
 import { useToast } from "@/hooks/use-toast";
-import { revalidatePath } from "next/cache";
+import { EditTradeDialog } from "@/components/journal/edit-trade/edit-trade-dialog";
 
 interface TableActionsProps {
   trade: Trade;
@@ -36,17 +36,14 @@ export function TableActions({
   onRefresh,
 }: TableActionsProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
-
-      // Optimistically update UI first
       onDelete(trade.id);
-
-      // Then perform server action
       const { error } = await deleteTrade(trade.id);
 
       if (error) {
@@ -57,13 +54,8 @@ export function TableActions({
         title: "Trade deleted",
         description: "The trade has been successfully deleted.",
       });
-
-      // Remove revalidatePath since we're using optimistic updates
-      // revalidatePath("/protected/journal"); <- Remove this line
     } catch (error) {
-      // If error occurs, rollback the optimistic update
       onRefresh();
-
       toast({
         title: "Error",
         description: "Failed to delete trade. Please try again.",
@@ -88,8 +80,7 @@ export function TableActions({
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
-              // TODO: Implement edit functionality
-              console.log("Edit trade:", trade.id);
+              setShowEditDialog(true);
             }}
           >
             <Pencil className="mr-2 h-4 w-4" />
@@ -107,6 +98,13 @@ export function TableActions({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <EditTradeDialog
+        trade={trade}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onSuccess={onRefresh}
+      />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
