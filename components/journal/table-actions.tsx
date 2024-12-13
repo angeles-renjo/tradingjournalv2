@@ -18,11 +18,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Edit, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { Trade } from "@/types";
 import { deleteTrade } from "@/lib/actions/trades";
 import { useToast } from "@/hooks/use-toast";
-import { EditTradeDialog } from "@/components/journal/edit-trade/edit-trade-dialog";
+import { EditTradeForm } from "@/components/trade-form/edit-trade-form";
 
 interface TableActionsProps {
   trade: Trade;
@@ -99,11 +99,10 @@ export function TableActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <EditTradeDialog
+      <EditTradeForm
         trade={trade}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
-        onSuccess={onRefresh}
       />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

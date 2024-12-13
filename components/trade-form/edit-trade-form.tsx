@@ -1,6 +1,15 @@
 // components/trade-form/edit-trade-form.tsx
+"use client";
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { BaseTradeForm } from "./base-trade-form";
 import { updateTrade, uploadTradeScreenshots } from "@/lib/actions/trades";
 import type { TradeFormState } from "@/types/trade-form-type";
@@ -8,19 +17,18 @@ import type { Trade, TradeUpdateData } from "@/types";
 
 interface EditTradeFormProps {
   trade: Trade;
-  isSubmitting: boolean;
-  setIsSubmitting: (isSubmitting: boolean) => void;
-  onSuccess: () => void;
-  onCancel: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => Promise<void>;
 }
 
 export function EditTradeForm({
   trade,
-  isSubmitting,
-  setIsSubmitting,
+  open,
+  onOpenChange,
   onSuccess,
-  onCancel,
 }: EditTradeFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   // Convert trade data to form state
@@ -32,11 +40,11 @@ export function EditTradeForm({
     positionSize: trade.position_size.toString(),
     stopLoss: trade.stop_loss?.toString() || "",
     takeProfit: trade.take_profit?.toString() || "",
-    setupType: trade.setup_type, // This is already non-null from Trade type
+    setupType: trade.setup_type,
     notes: trade.notes || "",
     entryDateTime: trade.entry_date,
     exitDateTime: trade.exit_date,
-    screenshots: trade.screenshots, // Initial screenshots are URLs
+    screenshots: trade.screenshots,
   };
 
   const handleSubmit = async (formData: TradeFormState) => {
@@ -76,7 +84,7 @@ export function EditTradeForm({
         take_profit: formData.takeProfit
           ? parseFloat(formData.takeProfit)
           : null,
-        setup_type: formData.setupType || "other", // Ensure non-null
+        setup_type: formData.setupType || "other",
         notes: formData.notes || null,
         entry_date: formData.entryDateTime,
         exit_date: formData.exitDateTime,
@@ -94,7 +102,10 @@ export function EditTradeForm({
         description: "Trade updated successfully",
       });
 
-      onSuccess();
+      if (onSuccess) {
+        await onSuccess();
+      }
+      onOpenChange(false);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to update trade";
@@ -103,19 +114,40 @@ export function EditTradeForm({
         description: message,
         variant: "destructive",
       });
-      throw err; // Propagate error to form for error display
+      throw err;
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <BaseTradeForm
-      initialData={initialData}
-      onSubmit={handleSubmit}
-      submitButtonText="Save Changes"
-      isSubmitting={isSubmitting}
-      onCancel={onCancel}
-    />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="sm:max-w-[600px] max-h-[85vh] my-auto"
+        style={{
+          position: "fixed",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          overflowY: "auto",
+        }}
+      >
+        <DialogHeader className="top-0 bg-background z-10 pb-4">
+          <DialogTitle>Edit Trade</DialogTitle>
+          <DialogDescription>
+            Update the details of your trade. Fields marked with * are required.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div>
+          <BaseTradeForm
+            initialData={initialData}
+            onSubmit={handleSubmit}
+            submitButtonText="Save Changes"
+            isSubmitting={isSubmitting}
+            onCancel={() => onOpenChange(false)}
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
