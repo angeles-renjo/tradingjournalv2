@@ -10,7 +10,7 @@ import MetricsGrid, {
 import RecentTrades, {
   RecentTradesSkeleton,
 } from "@/components/dashboard/recent-trades";
-import { TradeEntryForm } from "@/components/dashboard/trades/trade-entry-form";
+import { TradeEntryForm } from "@/components/trade-form/trade-entry-form";
 
 export default async function ProtectedPage() {
   const user = await getAuthenticatedUser();

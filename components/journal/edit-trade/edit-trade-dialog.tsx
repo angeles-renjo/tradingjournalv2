@@ -6,8 +6,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { EditTradeForm } from "./edit-trade-form";
+import { EditTradeForm } from "@/components/trade-form/edit-trade-form";
 import type { Trade } from "@/types";
 
 interface EditTradeDialogProps {
@@ -30,6 +31,9 @@ export function EditTradeDialog({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Edit Trade</DialogTitle>
+          <DialogDescription>
+            Modify the details of your trade below.
+          </DialogDescription>
         </DialogHeader>
         <EditTradeForm
           trade={trade}
