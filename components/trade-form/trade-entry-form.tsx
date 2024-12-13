@@ -1,5 +1,5 @@
-// components/trade-form/trade-entry-form.tsx
 "use client";
+
 import { useState } from "react";
 import { PlusCircle } from "lucide-react";
 import {
@@ -33,7 +33,54 @@ export function TradeEntryForm({
   const handleSubmit = async (formData: TradeFormState) => {
     setIsSubmitting(true);
     try {
-      // ... rest of the submit logic remains the same
+      // Handle screenshots
+      const newScreenshots = formData.screenshots.filter(
+        (s) => s instanceof File
+      ) as File[];
+      let screenshotUrls: string[] = [];
+
+      if (newScreenshots.length > 0) {
+        screenshotUrls = await uploadTradeScreenshots(userId, newScreenshots);
+      }
+
+      // Prepare trade data
+      const tradeData: TradeInsertData = {
+        user_id: userId,
+        instrument: formData.instrument,
+        direction: formData.direction,
+        entry_price: parseFloat(formData.entryPrice),
+        exit_price: parseFloat(formData.exitPrice),
+        position_size: parseFloat(formData.positionSize),
+        stop_loss: formData.stopLoss ? parseFloat(formData.stopLoss) : null,
+        take_profit: formData.takeProfit
+          ? parseFloat(formData.takeProfit)
+          : null,
+        setup_type: formData.setupType || "other",
+        profit_loss: calculateProfitLoss(formData),
+        profit_loss_percentage: calculateProfitLossPercentage(formData),
+        entry_date: formData.entryDateTime,
+        exit_date: formData.exitDateTime,
+        notes: formData.notes || null,
+        screenshots: screenshotUrls,
+      };
+
+      // Create trade
+      const { error } = await createTrade(tradeData);
+      if (error) throw new Error(error.message);
+
+      // Success handling
+      toast({
+        title: "Success",
+        description: "Trade created successfully",
+      });
+
+      // Notify parent
+      if (onTradeCreated) {
+        await onTradeCreated();
+      }
+
+      // Close dialog after delay
+      setTimeout(() => setOpen(false), 1500);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to create trade";
@@ -42,7 +89,7 @@ export function TradeEntryForm({
         description: message,
         variant: "destructive",
       });
-      throw err;
+      throw err; // Propagate error to form for error display
     } finally {
       setIsSubmitting(false);
     }
@@ -74,14 +121,14 @@ export function TradeEntryForm({
           overflowY: "auto",
         }}
       >
-        <DialogHeader className=" top-0 bg-background z-10 pb-4">
+        <DialogHeader className="top-0 bg-background z-10 pb-4">
           <DialogTitle>New Trade Entry</DialogTitle>
           <DialogDescription>
             Enter the details of your trade. Fields marked with * are required.
           </DialogDescription>
         </DialogHeader>
 
-        <div>
+        <div className="z-99">
           <BaseTradeForm
             initialData={INITIAL_FORM_STATE}
             onSubmit={handleSubmit}
@@ -92,4 +139,28 @@ export function TradeEntryForm({
       </DialogContent>
     </Dialog>
   );
+}
+
+// Utility functions for profit calculations
+function calculateProfitLoss(formData: TradeFormState): number {
+  const entryPrice = parseFloat(formData.entryPrice);
+  const exitPrice = parseFloat(formData.exitPrice);
+  const positionSize = parseFloat(formData.positionSize);
+
+  if (formData.direction === "long") {
+    return (exitPrice - entryPrice) * positionSize;
+  } else {
+    return (entryPrice - exitPrice) * positionSize;
+  }
+}
+
+function calculateProfitLossPercentage(formData: TradeFormState): number {
+  const entryPrice = parseFloat(formData.entryPrice);
+  const exitPrice = parseFloat(formData.exitPrice);
+
+  if (formData.direction === "long") {
+    return ((exitPrice - entryPrice) / entryPrice) * 100;
+  } else {
+    return ((entryPrice - exitPrice) / entryPrice) * 100;
+  }
 }

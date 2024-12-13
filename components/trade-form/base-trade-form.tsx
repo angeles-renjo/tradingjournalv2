@@ -29,20 +29,25 @@ export function BaseTradeForm({
   const { formData, previewUrls, handlers } = useTradeForm(initialData);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log("Submit handler called");
     e.preventDefault();
     setError("");
 
-    // Validate form
+    console.log("Form Data:", formData);
+
     const validationErrors = validateTradeForm(formData);
+    console.log("Validation Errors:", validationErrors);
+
     if (Object.keys(validationErrors).length > 0) {
       setError(Object.values(validationErrors)[0]);
       return;
     }
 
+    // Add this try-catch block to actually submit the form
     try {
       await onSubmit(formData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Form submission failed");
+      setError(err instanceof Error ? err.message : "Failed to submit form");
     }
   };
 
