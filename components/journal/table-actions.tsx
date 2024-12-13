@@ -18,17 +18,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { Trade } from "@/types";
 import { deleteTrade } from "@/lib/actions/trades";
 import { useToast } from "@/hooks/use-toast";
+import { revalidatePath } from "next/cache";
 
 interface TableActionsProps {
   trade: Trade;
+  onDelete: (id: string) => void;
   onRefresh: () => void;
 }
 
-export function TableActions({ trade, onRefresh }: TableActionsProps) {
+export function TableActions({
+  trade,
+  onDelete,
+  onRefresh,
+}: TableActionsProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
@@ -36,6 +42,11 @@ export function TableActions({ trade, onRefresh }: TableActionsProps) {
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
+
+      // Optimistically update UI first
+      onDelete(trade.id);
+
+      // Then perform server action
       const { error } = await deleteTrade(trade.id);
 
       if (error) {
@@ -47,8 +58,12 @@ export function TableActions({ trade, onRefresh }: TableActionsProps) {
         description: "The trade has been successfully deleted.",
       });
 
-      onRefresh();
+      // Remove revalidatePath since we're using optimistic updates
+      // revalidatePath("/protected/journal"); <- Remove this line
     } catch (error) {
+      // If error occurs, rollback the optimistic update
+      onRefresh();
+
       toast({
         title: "Error",
         description: "Failed to delete trade. Please try again.",
@@ -57,14 +72,6 @@ export function TableActions({ trade, onRefresh }: TableActionsProps) {
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);
-    }
-  };
-
-  const handleViewScreenshots = () => {
-    // If trade has screenshots, open them in a dialog
-    if (trade.screenshots && trade.screenshots.length > 0) {
-      // TODO: Implement screenshot viewer
-      console.log("View screenshots:", trade.screenshots);
     }
   };
 
@@ -88,17 +95,6 @@ export function TableActions({ trade, onRefresh }: TableActionsProps) {
             <Pencil className="mr-2 h-4 w-4" />
             Edit
           </DropdownMenuItem>
-          {trade.screenshots && trade.screenshots.length > 0 && (
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                handleViewScreenshots();
-              }}
-            >
-              <Eye className="mr-2 h-4 w-4" />
-              View Screenshots
-            </DropdownMenuItem>
-          )}
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();

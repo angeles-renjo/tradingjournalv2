@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useOptimistic, useTransition } from "react";
 import {
   Table,
   TableBody,
@@ -29,7 +29,9 @@ interface DataTableProps {
 
 export function DataTable({ initialData, columns, userId }: DataTableProps) {
   const router = useRouter();
-  const [data, setData] = useState<Trade[]>(initialData);
+  const [isPending, startTransition] = useTransition();
+  const [optimisticTrades, updateOptimisticTrades] = useOptimistic(initialData);
+
   const [isLoading, setIsLoading] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<{
@@ -55,7 +57,9 @@ export function DataTable({ initialData, columns, userId }: DataTableProps) {
       }
 
       if (filteredData) {
-        setData(filteredData);
+        startTransition(() => {
+          updateOptimisticTrades(filteredData);
+        });
         setCurrentPage(1);
         setExpandedRows(new Set());
       }
@@ -64,6 +68,14 @@ export function DataTable({ initialData, columns, userId }: DataTableProps) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDelete = async (tradeId: string) => {
+    startTransition(() => {
+      updateOptimisticTrades((currentTrades) =>
+        currentTrades.filter((trade) => trade.id !== tradeId)
+      );
+    });
   };
 
   const toggleRow = (tradeId: string) => {
@@ -85,7 +97,7 @@ export function DataTable({ initialData, columns, userId }: DataTableProps) {
   };
 
   // Sort data
-  const sortedData = [...data].sort((a, b) => {
+  const sortedData = [...optimisticTrades].sort((a, b) => {
     if (sortConfig.direction === null) return 0;
 
     const aValue = a[sortConfig.key];
@@ -194,6 +206,7 @@ export function DataTable({ initialData, columns, userId }: DataTableProps) {
                         </div>
                         <TableActions
                           trade={trade}
+                          onDelete={handleDelete}
                           onRefresh={() => router.refresh()}
                         />
                       </div>
@@ -210,6 +223,7 @@ export function DataTable({ initialData, columns, userId }: DataTableProps) {
                     <TableCell className="hidden md:table-cell">
                       <TableActions
                         trade={trade}
+                        onDelete={handleDelete}
                         onRefresh={() => router.refresh()}
                       />
                     </TableCell>
