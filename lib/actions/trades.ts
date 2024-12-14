@@ -253,21 +253,67 @@ export async function deleteTrade(id: string): Promise<{
 }> {
   try {
     const supabase = await createClient();
-    const { error } = await supabase.from("trades").delete().eq("id", id);
 
-    if (error) {
+    // First get the trade details
+    const { data: trade, error: fetchError } = await supabase
+      .from("trades")
+      .select("user_id, id, screenshots")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (fetchError) {
       return {
         error: {
-          message: error.message,
+          message: fetchError.message,
           code: "DB_ERROR",
-          details: error,
+          details: fetchError,
         },
       };
+    }
+
+    if (!trade) {
+      return {
+        error: {
+          message: `Trade with ID ${id} not found`,
+          code: "NOT_FOUND",
+        },
+      };
+    }
+
+    // Delete the trade from the database first
+    const { error: deleteError } = await supabase
+      .from("trades")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      return {
+        error: {
+          message: deleteError.message,
+          code: "DB_ERROR",
+          details: deleteError,
+        },
+      };
+    }
+
+    // If the trade has screenshots, delete them from storage
+    if (trade.screenshots && trade.screenshots.length > 0) {
+      try {
+        await deleteTradeScreenshots(
+          trade.user_id,
+          trade.id,
+          trade.screenshots
+        );
+      } catch (error) {
+        console.error("Failed to delete screenshots:", error);
+        // Continue with the deletion process even if screenshot deletion fails
+      }
     }
 
     revalidatePath("/protected/journal");
     return { error: null };
   } catch (error) {
+    console.error("Delete error:", error);
     return {
       error: {
         message:
@@ -352,6 +398,41 @@ export async function getFilteredTrades(
             : "An unexpected error occurred",
         code: "UNKNOWN_ERROR",
       },
+    };
+  }
+}
+
+async function deleteTradeScreenshots(
+  userId: string,
+  tradeId: string,
+  screenshotUrls: string[]
+): Promise<void> {
+  const supabase = await createClient();
+
+  const extractFilePathsFromUrls = (screenshotUrls: string[]): string[] => {
+    return screenshotUrls
+      .map((url) => {
+        const parts = url.split("/trade-screenshots/");
+        return parts.length > 1 ? parts[1] : "";
+      })
+      .filter((path) => path !== "");
+  };
+
+  const filePaths = extractFilePathsFromUrls(screenshotUrls);
+
+  if (filePaths.length === 0) {
+    return;
+  }
+
+  const { error: storageError } = await supabase.storage
+    .from("trade-screenshots")
+    .remove(filePaths);
+
+  if (storageError) {
+    throw {
+      message: "Failed to delete screenshots",
+      code: "STORAGE_ERROR",
+      details: storageError,
     };
   }
 }

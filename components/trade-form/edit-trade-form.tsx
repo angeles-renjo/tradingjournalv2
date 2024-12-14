@@ -10,7 +10,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { BaseTradeForm } from "./base-trade-form";
-import { updateTrade, uploadTradeScreenshots } from "@/lib/actions/trades";
+import { updateTrade } from "@/lib/actions/trades";
+import { uploadTradeScreenshots } from "@/lib/actions/trades"; // Updated import
 import type { TradeFormState } from "@/types/trade-form-type";
 import type { Trade, TradeUpdateData } from "@/types";
 
@@ -43,29 +44,29 @@ export function EditTradeForm({
     notes: trade.notes || "",
     entryDateTime: trade.entry_date,
     exitDateTime: trade.exit_date,
-    screenshots: trade.screenshots || [], // Ensure screenshots is always an array
+    screenshots: [], // Start with empty array, we'll handle existing URLs separately
   };
 
   const handleSubmit = async (formData: TradeFormState) => {
     setIsSubmitting(true);
     try {
-      // Handle screenshots
-      let updatedScreenshotUrls = [...(trade.screenshots || [])];
+      // Separate existing URLs from new File objects
+      const existingUrls = trade.screenshots || [];
       const newScreenshots = formData.screenshots.filter(
         (s) => s instanceof File
       ) as File[];
 
+      let updatedScreenshotUrls = [...existingUrls];
+
+      // Upload new screenshots if any
       if (newScreenshots.length > 0) {
         try {
-          const newScreenshotUrls = await uploadTradeScreenshots(
+          const newUrls = await uploadTradeScreenshots(
             trade.user_id,
-            trade.id, // Add trade.id as required by updated uploadTradeScreenshots
+            trade.id,
             newScreenshots
           );
-          updatedScreenshotUrls = [
-            ...updatedScreenshotUrls,
-            ...newScreenshotUrls,
-          ];
+          updatedScreenshotUrls = [...updatedScreenshotUrls, ...newUrls];
         } catch (uploadError) {
           console.error("Screenshot upload error:", uploadError);
           toast({
@@ -75,11 +76,6 @@ export function EditTradeForm({
             variant: "destructive",
           });
         }
-      } else {
-        // If no new screenshots, use existing screenshots from form
-        updatedScreenshotUrls = formData.screenshots.filter(
-          (s) => typeof s === "string"
-        ) as string[];
       }
 
       // Prepare update data
@@ -130,6 +126,7 @@ export function EditTradeForm({
         description: message,
         variant: "destructive",
       });
+      throw err; // Propagate error to form for error display
     } finally {
       setIsSubmitting(false);
     }
