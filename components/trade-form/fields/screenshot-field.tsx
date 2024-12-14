@@ -15,11 +15,29 @@ interface ScreenshotFieldsProps {
 }
 
 export function ScreenshotFields({
-  formData,
   previewUrls,
   handlers,
 }: ScreenshotFieldsProps) {
   const { handleFileChange, removeImage } = handlers;
+
+  const getImageLoader = (src: string) => {
+    // Check if the URL is from Supabase
+    if (src.includes("supabase")) {
+      return {
+        src,
+        width: 300,
+        height: 300,
+        unoptimized: process.env.NODE_ENV === "development",
+      };
+    }
+    // For local file previews
+    return {
+      src,
+      width: 300,
+      height: 300,
+      unoptimized: true, // Always unoptimized for local file previews
+    };
+  };
 
   return (
     <div className="grid grid-cols-12 gap-4 items-start">
@@ -39,7 +57,7 @@ export function ScreenshotFields({
             className="cursor-pointer opacity-0 absolute inset-0 w-full h-full z-10"
           />
           <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg px-3 py-4 hover:border-muted-foreground/50 transition-colors group-focus-within:border-primary">
-            <div className="flex flex-col items-center  text-sm text-muted-foreground">
+            <div className="flex flex-col items-center text-sm text-muted-foreground">
               <Upload className="h-5 w-5" />
               <span className="font-medium">Choose files</span>
               <span className="text-xs">or drag and drop</span>
@@ -60,12 +78,23 @@ export function ScreenshotFields({
             <div key={index} className="relative group">
               <div className="aspect-square rounded-lg border border-border overflow-hidden bg-muted shadow-sm transition-all duration-200 group-hover:shadow-md">
                 <div className="relative w-full h-full">
-                  <Image
-                    src={url}
-                    alt={`Screenshot ${index + 1}`}
-                    fill
-                    className="object-cover transition-transform duration-200 group-hover:scale-105"
-                  />
+                  {/* Error boundary for image loading */}
+                  <div className="relative w-full h-full">
+                    {url && (
+                      <Image
+                        {...getImageLoader(url)}
+                        alt={`Screenshot ${index + 1}`}
+                        className="object-cover transition-transform duration-200 group-hover:scale-105"
+                        sizes="(max-width: 300px) 100vw, 300px"
+                        priority={index < 4} // Prioritize loading for first 4 images
+                        onError={(e) => {
+                          // Fallback for failed image loads
+                          const imgElement = e.target as HTMLImageElement;
+                          imgElement.src = "/placeholder-image.png"; // Add a placeholder image to your public folder
+                        }}
+                      />
+                    )}
+                  </div>
                   {/* Overlay on hover */}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                 </div>

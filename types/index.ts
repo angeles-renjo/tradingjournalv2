@@ -143,3 +143,19 @@ export interface TradeUpdateData {
   exit_date: string;
   screenshots: string[];
 }
+
+export interface TradeCreateInput {
+  user_id: string;
+  instrument: string;
+  direction: TradeDirection;
+  entry_price: number;
+  exit_price: number;
+  position_size: number;
+  stop_loss: number | null;
+  take_profit: number | null;
+  setup_type: TradeSetupType;
+  entry_date: string;
+  exit_date: string;
+  notes: string | null;
+  screenshots?: File[];
+}

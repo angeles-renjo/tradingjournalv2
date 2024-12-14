@@ -1,4 +1,3 @@
-// components/trade-form/edit-trade-form.tsx
 "use client";
 
 import { useState } from "react";
@@ -44,29 +43,40 @@ export function EditTradeForm({
     notes: trade.notes || "",
     entryDateTime: trade.entry_date,
     exitDateTime: trade.exit_date,
-    screenshots: trade.screenshots,
+    screenshots: trade.screenshots || [], // Ensure screenshots is always an array
   };
 
   const handleSubmit = async (formData: TradeFormState) => {
     setIsSubmitting(true);
     try {
-      // Upload new screenshots if any
-      let updatedScreenshotUrls = [...trade.screenshots];
+      // Handle screenshots
+      let updatedScreenshotUrls = [...(trade.screenshots || [])];
       const newScreenshots = formData.screenshots.filter(
         (s) => s instanceof File
       ) as File[];
 
       if (newScreenshots.length > 0) {
-        const newScreenshotUrls = await uploadTradeScreenshots(
-          trade.user_id,
-          newScreenshots
-        );
-        updatedScreenshotUrls = [
-          ...updatedScreenshotUrls,
-          ...newScreenshotUrls,
-        ];
+        try {
+          const newScreenshotUrls = await uploadTradeScreenshots(
+            trade.user_id,
+            trade.id, // Add trade.id as required by updated uploadTradeScreenshots
+            newScreenshots
+          );
+          updatedScreenshotUrls = [
+            ...updatedScreenshotUrls,
+            ...newScreenshotUrls,
+          ];
+        } catch (uploadError) {
+          console.error("Screenshot upload error:", uploadError);
+          toast({
+            title: "Warning",
+            description:
+              "Failed to upload new screenshots, but trade will be updated",
+            variant: "destructive",
+          });
+        }
       } else {
-        // If no new screenshots, use existing screenshots
+        // If no new screenshots, use existing screenshots from form
         updatedScreenshotUrls = formData.screenshots.filter(
           (s) => typeof s === "string"
         ) as string[];
@@ -92,9 +102,14 @@ export function EditTradeForm({
       };
 
       // Update trade
-      const { error: updateError } = await updateTrade(trade.id, updateData);
-      if (updateError) {
-        throw new Error(updateError.message);
+      const { data, error } = await updateTrade(trade.id, updateData);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data) {
+        throw new Error("No data returned from trade update");
       }
 
       toast({
@@ -107,6 +122,7 @@ export function EditTradeForm({
       }
       onOpenChange(false);
     } catch (err) {
+      console.error("Trade update error:", err);
       const message =
         err instanceof Error ? err.message : "Failed to update trade";
       toast({
@@ -114,7 +130,6 @@ export function EditTradeForm({
         description: message,
         variant: "destructive",
       });
-      throw err;
     } finally {
       setIsSubmitting(false);
     }
@@ -138,7 +153,7 @@ export function EditTradeForm({
           </DialogDescription>
         </DialogHeader>
 
-        <div>
+        <div className="z-99">
           <BaseTradeForm
             initialData={initialData}
             onSubmit={handleSubmit}
