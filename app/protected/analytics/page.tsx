@@ -1,3 +1,4 @@
+// protected/analytics/page.tsx
 import { getTradesByUser } from "@/lib/actions/trades";
 import { getTradeAnalytics } from "@/lib/actions/analytics";
 import { getGoals } from "@/lib/actions/goals";

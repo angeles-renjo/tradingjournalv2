@@ -1,3 +1,4 @@
+// protected/page.tsx
 import { Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { getAuthenticatedUser } from "@/lib/utils/db";

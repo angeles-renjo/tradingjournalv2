@@ -1,3 +1,4 @@
+// protected/journal/page.tsx
 import { getAuthenticatedUser } from "@/lib/utils/db";
 import { getTradesByUser } from "@/lib/actions/trades";
 import { columns } from "@/components/journal/table-columns";
