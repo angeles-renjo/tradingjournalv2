@@ -11,11 +11,11 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { BaseTradeForm } from "./base-trade-form";
-import { createTrade, uploadTradeScreenshots } from "@/lib/actions/trades";
+import { createTrade } from "@/lib/actions/trades";
 import { useToast } from "@/hooks/use-toast";
 import { INITIAL_FORM_STATE } from "@/types/trade-form-type";
 import type { TradeFormState } from "@/types/trade-form-type";
-import type { TradeInsertData } from "@/types";
+import type { TradeCreateInput } from "@/types";
 
 interface TradeEntryFormProps {
   userId: string;
@@ -33,18 +33,8 @@ export function TradeEntryForm({
   const handleSubmit = async (formData: TradeFormState) => {
     setIsSubmitting(true);
     try {
-      // Handle screenshots
-      const newScreenshots = formData.screenshots.filter(
-        (s) => s instanceof File
-      ) as File[];
-      let screenshotUrls: string[] = [];
-
-      if (newScreenshots.length > 0) {
-        screenshotUrls = await uploadTradeScreenshots(userId, newScreenshots);
-      }
-
       // Prepare trade data
-      const tradeData: TradeInsertData = {
+      const tradeData: TradeCreateInput = {
         user_id: userId,
         instrument: formData.instrument,
         direction: formData.direction,
@@ -56,17 +46,20 @@ export function TradeEntryForm({
           ? parseFloat(formData.takeProfit)
           : null,
         setup_type: formData.setupType || "other",
-        profit_loss: calculateProfitLoss(formData),
-        profit_loss_percentage: calculateProfitLossPercentage(formData),
         entry_date: formData.entryDateTime,
         exit_date: formData.exitDateTime,
         notes: formData.notes || null,
-        screenshots: screenshotUrls,
+        screenshots: formData.screenshots.filter(
+          (s) => s instanceof File
+        ) as File[],
       };
 
       // Create trade
-      const { error } = await createTrade(tradeData);
+      const { data, error } = await createTrade(tradeData);
+
       if (error) throw new Error(error.message);
+
+      if (!data) throw new Error("No data returned from trade creation");
 
       // Success handling
       toast({
@@ -79,9 +72,10 @@ export function TradeEntryForm({
         await onTradeCreated();
       }
 
-      // Close dialog after delay
-      setTimeout(() => setOpen(false), 1500);
+      // Reset form and close dialog
+      setOpen(false);
     } catch (err) {
+      console.error("Trade submission error:", err);
       const message =
         err instanceof Error ? err.message : "Failed to create trade";
       toast({
@@ -89,7 +83,6 @@ export function TradeEntryForm({
         description: message,
         variant: "destructive",
       });
-      throw err; // Propagate error to form for error display
     } finally {
       setIsSubmitting(false);
     }
@@ -139,28 +132,4 @@ export function TradeEntryForm({
       </DialogContent>
     </Dialog>
   );
-}
-
-// Utility functions for profit calculations
-function calculateProfitLoss(formData: TradeFormState): number {
-  const entryPrice = parseFloat(formData.entryPrice);
-  const exitPrice = parseFloat(formData.exitPrice);
-  const positionSize = parseFloat(formData.positionSize);
-
-  if (formData.direction === "long") {
-    return (exitPrice - entryPrice) * positionSize;
-  } else {
-    return (entryPrice - exitPrice) * positionSize;
-  }
-}
-
-function calculateProfitLossPercentage(formData: TradeFormState): number {
-  const entryPrice = parseFloat(formData.entryPrice);
-  const exitPrice = parseFloat(formData.exitPrice);
-
-  if (formData.direction === "long") {
-    return ((exitPrice - entryPrice) / entryPrice) * 100;
-  } else {
-    return ((entryPrice - exitPrice) / entryPrice) * 100;
-  }
 }

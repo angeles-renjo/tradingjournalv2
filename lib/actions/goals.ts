@@ -1,6 +1,8 @@
+// lib/actions/goals.ts
 "use server";
 
 import { createClient } from "@/lib/utils/supabase/server";
+import { getAuthenticatedUser } from "@/lib/utils/db";
 import type {
   Goal,
   GoalInput,
@@ -16,18 +18,8 @@ import { revalidatePath } from "next/cache";
  */
 export async function getGoals(): Promise<GoalsListResponse> {
   try {
+    const user = await getAuthenticatedUser();
     const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return {
-        data: null,
-        error: userError ? userError.message : "No authenticated user found",
-      };
-    }
 
     const { data: goals, error: fetchError } = await supabase
       .from("goals")
@@ -54,18 +46,8 @@ export async function getGoals(): Promise<GoalsListResponse> {
  */
 export async function setGoal(goalInput: GoalInput): Promise<GoalResponse> {
   try {
+    const user = await getAuthenticatedUser();
     const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return {
-        data: null,
-        error: userError ? userError.message : "No authenticated user found",
-      };
-    }
 
     // Validation
     if (!goalInput.target_amount || !goalInput.start_date) {
@@ -121,15 +103,8 @@ export async function updateGoalStatus(
   status: GoalStatus
 ): Promise<GoalResponse> {
   try {
+    const user = await getAuthenticatedUser();
     const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return { data: null, error: "Authentication failed" };
-    }
 
     const updates: Partial<Goal> = {
       status,
@@ -171,15 +146,8 @@ export async function checkGoalsProgress(
   currentProfit: number
 ): Promise<GoalsListResponse> {
   try {
+    const user = await getAuthenticatedUser();
     const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return { data: null, error: "Authentication failed" };
-    }
 
     // Get active goals
     const { data: activeGoals, error: fetchError } = await supabase
@@ -234,15 +202,8 @@ export async function deleteGoal(
   goalId: string
 ): Promise<{ error: string | null }> {
   try {
+    const user = await getAuthenticatedUser();
     const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return { error: "Authentication failed" };
-    }
 
     const { error: deleteError } = await supabase
       .from("goals")

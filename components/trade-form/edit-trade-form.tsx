@@ -1,4 +1,3 @@
-// components/trade-form/edit-trade-form.tsx
 "use client";
 
 import { useState } from "react";
@@ -11,7 +10,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { BaseTradeForm } from "./base-trade-form";
-import { updateTrade, uploadTradeScreenshots } from "@/lib/actions/trades";
+import { updateTrade } from "@/lib/actions/trades";
+import { uploadTradeScreenshots } from "@/lib/actions/trades"; // Updated import
 import type { TradeFormState } from "@/types/trade-form-type";
 import type { Trade, TradeUpdateData } from "@/types";
 
@@ -44,32 +44,38 @@ export function EditTradeForm({
     notes: trade.notes || "",
     entryDateTime: trade.entry_date,
     exitDateTime: trade.exit_date,
-    screenshots: trade.screenshots,
+    screenshots: [], // Start with empty array, we'll handle existing URLs separately
   };
 
   const handleSubmit = async (formData: TradeFormState) => {
     setIsSubmitting(true);
     try {
-      // Upload new screenshots if any
-      let updatedScreenshotUrls = [...trade.screenshots];
+      // Separate existing URLs from new File objects
+      const existingUrls = trade.screenshots || [];
       const newScreenshots = formData.screenshots.filter(
         (s) => s instanceof File
       ) as File[];
 
+      let updatedScreenshotUrls = [...existingUrls];
+
+      // Upload new screenshots if any
       if (newScreenshots.length > 0) {
-        const newScreenshotUrls = await uploadTradeScreenshots(
-          trade.user_id,
-          newScreenshots
-        );
-        updatedScreenshotUrls = [
-          ...updatedScreenshotUrls,
-          ...newScreenshotUrls,
-        ];
-      } else {
-        // If no new screenshots, use existing screenshots
-        updatedScreenshotUrls = formData.screenshots.filter(
-          (s) => typeof s === "string"
-        ) as string[];
+        try {
+          const newUrls = await uploadTradeScreenshots(
+            trade.user_id,
+            trade.id,
+            newScreenshots
+          );
+          updatedScreenshotUrls = [...updatedScreenshotUrls, ...newUrls];
+        } catch (uploadError) {
+          console.error("Screenshot upload error:", uploadError);
+          toast({
+            title: "Warning",
+            description:
+              "Failed to upload new screenshots, but trade will be updated",
+            variant: "destructive",
+          });
+        }
       }
 
       // Prepare update data
@@ -92,9 +98,14 @@ export function EditTradeForm({
       };
 
       // Update trade
-      const { error: updateError } = await updateTrade(trade.id, updateData);
-      if (updateError) {
-        throw new Error(updateError.message);
+      const { data, error } = await updateTrade(trade.id, updateData);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data) {
+        throw new Error("No data returned from trade update");
       }
 
       toast({
@@ -107,6 +118,7 @@ export function EditTradeForm({
       }
       onOpenChange(false);
     } catch (err) {
+      console.error("Trade update error:", err);
       const message =
         err instanceof Error ? err.message : "Failed to update trade";
       toast({
@@ -114,7 +126,7 @@ export function EditTradeForm({
         description: message,
         variant: "destructive",
       });
-      throw err;
+      throw err; // Propagate error to form for error display
     } finally {
       setIsSubmitting(false);
     }
@@ -138,7 +150,7 @@ export function EditTradeForm({
           </DialogDescription>
         </DialogHeader>
 
-        <div>
+        <div className="z-99">
           <BaseTradeForm
             initialData={initialData}
             onSubmit={handleSubmit}
