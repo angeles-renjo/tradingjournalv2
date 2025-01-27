@@ -1,6 +1,6 @@
-import type { Trade } from "@/types";
+import type { Trade } from '@/types';
 
-export type SortDirection = "asc" | "desc" | null;
+export type SortDirection = 'asc' | 'desc' | null;
 
 export interface Column {
   key: keyof Trade;
@@ -10,43 +10,48 @@ export interface Column {
 
 export const columns: Column[] = [
   {
-    key: "entry_date",
-    label: "Date",
+    key: 'entry_date',
+    label: 'Date',
     sortable: true,
   },
   {
-    key: "instrument",
-    label: "Instrument",
+    key: 'instrument',
+    label: 'Instrument',
     sortable: true,
   },
   {
-    key: "direction",
-    label: "Direction",
+    key: 'direction',
+    label: 'Direction',
     sortable: true,
   },
   {
-    key: "entry_price",
-    label: "Entry",
+    key: 'entry_price',
+    label: 'Entry',
     sortable: true,
   },
   {
-    key: "exit_price",
-    label: "Exit",
+    key: 'exit_price',
+    label: 'Exit',
     sortable: true,
   },
   {
-    key: "position_size",
-    label: "Size",
+    key: 'position_size',
+    label: 'Size',
     sortable: true,
   },
   {
-    key: "profit_loss",
-    label: "P/L",
+    key: 'profit_loss',
+    label: 'P/L',
     sortable: true,
   },
   {
-    key: "setup_type",
-    label: "Setup",
+    key: 'setup_type',
+    label: 'Setup',
     sortable: true,
+  },
+  {
+    key: 'notes',
+    label: 'Notes',
+    sortable: false,
   },
 ];
