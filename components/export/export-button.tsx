@@ -14,6 +14,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DateRangeSelect } from './date-range-select';
 import { Button } from '@/components/ui/button';
+import { exportData } from '@/lib/actions/export';
 
 interface DateRange {
   startDate: Date;
@@ -34,14 +35,32 @@ const ExportButton = () => {
     setLoading(true);
     setError(null);
     try {
-      // Export functionality will be implemented in Phase 1.2
-      console.log('Exporting with options:', {
+      const result = await exportData({
         dateRange,
         format,
         includeAnalysis,
       });
+
+      if (result.success && result.data) {
+        // Create and download the CSV file
+        const blob = new Blob([result.data], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `trades-export-${format.toLowerCase()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        throw new Error(result.error || 'Export failed');
+      }
     } catch (error) {
-      setError('Failed to export data. Please try again.');
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to export data. Please try again.'
+      );
       console.error('Export failed:', error);
     } finally {
       setLoading(false);

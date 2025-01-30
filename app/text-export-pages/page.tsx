@@ -1,10 +1,11 @@
 'use client';
+import React from 'react';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { exportData, ExportOptions } from '@/lib/actions/export';
-import ExportButton from '@/components/export/export-button';
+import ExportButton from '../../components/export/export-button';
+import { exportData, ExportOptions } from '../../lib/actions/export';
 
 const TestExportPage = () => {
   const [testResults, setTestResults] = useState<any[]>([]);
@@ -137,22 +138,24 @@ const TestExportPage = () => {
                     key={index}
                     className={`p-4 rounded-md ${
                       result.status === 'SUCCESS'
-                        ? 'bg-green-50 border border-green-200'
-                        : 'bg-red-50 border border-red-200'
+                        ? 'bg-green-50 border border-green-200 text-green-900'
+                        : 'bg-red-50 border border-red-200 text-red-900'
                     }`}
                   >
-                    <p className='font-medium'>{result.name}</p>
-                    <p className='text-sm'>Status: {result.status}</p>
-                    <p className='text-sm'>
+                    <p className='font-medium text-gray-900'>{result.name}</p>
+                    <p className='text-sm text-gray-700'>
+                      Status: {result.status}
+                    </p>
+                    <p className='text-sm text-gray-700'>
                       Time: {new Date(result.timestamp).toLocaleTimeString()}
                     </p>
                     {result.metadata && (
-                      <pre className='text-xs mt-2 bg-white p-2 rounded'>
+                      <pre className='text-xs mt-2 bg-white p-2 rounded text-gray-900'>
                         {JSON.stringify(result.metadata, null, 2)}
                       </pre>
                     )}
                     {result.error && (
-                      <p className='text-sm text-red-600 mt-2'>
+                      <p className='text-sm text-red-700 mt-2'>
                         {result.error}
                       </p>
                     )}
